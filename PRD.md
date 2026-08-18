@@ -146,13 +146,27 @@ Dado que o objetivo primário é portfólio (seção 3), métricas de sucesso n�
 - Decisões de arquitetura documentadas e justificáveis em entrevista técnica
 - Cobertura das áreas multidisciplinares propostas: modelagem de dados, orquestração de IA, segurança (RLS/multi-tenancy), frontend, billing
 
+### 11.1 Critério de sucesso técnico mensurável do MVP
+
+Complementa as métricas qualitativas acima com limiares concretos, verificáveis por fase (detalhamento por fase em ROADMAP.md):
+
+| Critério | Limiar |
+|---|---|
+| Isolamento de tenant | Teste automatizado de cross-tenant leak passando (zero exceções) — não é aceito validar isso só por revisão de código |
+| Precisão de recorrência | Zero falsos positivos no conjunto sintético de teste (agrupar achados genuinamente distintos é o erro mais caro, risco #4) |
+| Latência do pipeline de IA | Análise completa (3 etapas) de uma transcrição de tamanho típico (~30-45 min de reunião) em menos de 60s, do ponto de vista do usuário |
+| Custo por análise | Custo total das 3 chamadas de IA por reunião analisada, medido via `ai_calls`, mantido abaixo de um teto definido em Fase 3 do roadmap (referência inicial: sob US$0,10/reunião) |
+| Disponibilidade pública | Produto acessível sem necessidade de setup do avaliador — workspace de demonstração navegável (Fase 8 do roadmap) |
+
 ## 12. Decisões em Aberto / Próximos Passos
 
 1. ~~Definir método de análise de IA (seção 8.3)~~ — decidido
 2. ~~Avaliar e decidir stack técnica (seção 10)~~ — decidido
-3. Desenhar schema de dados (reuniões, riscos, decisões, workspace multi-tenant) — ver ARCHITECTURE.md
-4. Desenhar fluxo de dados ponta a ponta (ingestão → extração → análise → persistência → dashboard) — ver ARCHITECTURE.md
-5. Definir critério de sucesso técnico mensurável para o MVP
+3. ~~Desenhar schema de dados~~ — ver ARCHITECTURE.md
+4. ~~Desenhar fluxo de dados ponta a ponta~~ — ver ARCHITECTURE.md
+5. ~~Definir critério de sucesso técnico mensurável para o MVP~~ — ver seção 11.1
+
+Nenhuma decisão de planejamento em aberto no momento. Próximo passo é execução conforme ROADMAP.md, Fase 0.
 
 ## 13. Histórico de Decisões
 
