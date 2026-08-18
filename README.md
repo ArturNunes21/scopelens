@@ -1,32 +1,34 @@
 # ScopeLens
 
-Analista de projeto assistido por IA — a partir da transcrição de uma reunião de time (daily, planning, retro, kickoff), extrai dados estruturados sobre o andamento do projeto, traduz isso para linguagem de negócio, diagnostica riscos e bloqueios (inclusive os não ditos explicitamente) e acompanha a recorrência desses problemas ao longo de múltiplas reuniões.
+An AI-assisted project analyst — given the transcript of a team meeting (daily, planning, retro, kickoff), it extracts structured data about project status, translates it into business language, diagnoses risks and blockers (including ones not explicitly stated), and tracks the recurrence of those problems across multiple meetings.
 
-Projeto de portfólio, não um produto com validação comercial — o objetivo é demonstrar, de ponta a ponta, capacidade de identificar uma dor real de mercado, pesquisar concorrência antes de construir, tomar decisões de arquitetura justificadas, e entregar um produto multidisciplinar (dados, IA, backend, frontend, segurança).
+A portfolio project, not a commercially validated product — the goal is to demonstrate, end to end, the ability to identify a real market pain point, research competitors before building, make justified architecture decisions, and deliver a multidisciplinary product (data, AI, backend, frontend, security).
 
-## Documentação
+## Documentation
 
-- [`PRD.md`](./PRD.md) — problema, pesquisa de mercado, escopo, decisões de produto e stack
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — schema de dados e fluxo ponta a ponta
-- [`ROADMAP.md`](./ROADMAP.md) — fases de implementação
-- [`CONTEXT.md`](./CONTEXT.md) — contexto do autor e do projeto (referência para desenvolvimento assistido por IA)
+- [`PRD.md`](./PRD.md) — problem, market research, scope, product decisions, and stack
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — data schema and end-to-end flow
+- [`ROADMAP.md`](./ROADMAP.md) — implementation phases
+- [`TODO.md`](./TODO.md) — phase-by-phase progress tracker
+- [`SETUP.md`](./SETUP.md) — account/credential setup guide
+- [`CONTEXT.md`](./CONTEXT.md) — author and project context (reference for AI-assisted development)
 
 ## Stack
 
-Next.js (Vercel) · Supabase (Postgres/Auth/Realtime) · Claude API (Anthropic) · Stripe · Sentry · PostHog — detalhes e justificativa em `PRD.md` seção 10.
+Next.js (Vercel) · Supabase (Postgres/Auth/Realtime) · Claude API (Anthropic) · Stripe · Sentry · PostHog — details and rationale in `PRD.md` section 10.
 
-## Rodando localmente
+## Running locally
 
 ```bash
 npm install
-cp .env.example .env.local   # preencher com chaves reais — ver comentários no arquivo
+cp .env.example .env.local   # fill in with real keys — see comments in the file
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
 
-Outros scripts: `npm run lint`, `npm run typecheck`, `npm run build`.
+Other scripts: `npm run lint`, `npm run typecheck`, `npm run build`.
 
 ## Status
 
-Em desenvolvimento — escopo e arquitetura fechados (ver documentação acima), Fase 0 do roadmap em andamento. Nenhuma feature de produto implementada ainda.
+In development — scope and architecture closed (see documentation above), Phase 0 of the roadmap in progress. No product features implemented yet.

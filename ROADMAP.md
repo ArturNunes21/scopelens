@@ -1,102 +1,102 @@
-# Roadmap de Implementação — ScopeLens
+# Implementation Roadmap — ScopeLens
 
-**Depende de:** PRD.md, ARCHITECTURE.md
-**Princípios que guiam a ordem das fases:**
-- Instrumentar (erro + analytics) antes de escrever lógica de produto, não depois — mais barato de fazer cedo do que retroativamente.
-- Fatia vertical por fase: cada fase entrega algo que roda ponta a ponta e é deployável, não uma camada isolada (ex.: não "todo o schema primeiro, toda a UI depois").
-- RLS e isolamento de tenant são testados explicitamente assim que existem — é requisito de segurança (PRD seção 9), não detalhe de implementação a validar depois.
-- IA entra em 3 fases separadas (extração → recorrência → diagnóstico/síntese), na mesma ordem de custo crescente definida em ARCHITECTURE.md — cada uma testável isoladamente antes de encadear a próxima.
-- Billing é a fase mais tardia por decisão do PRD (8.2, pós-MVP) — infraestrutura de pagamento só depois do produto central provar que funciona.
-
----
-
-## Fase 0 — Fundação e instrumentação
-
-**Objetivo:** esqueleto do projeto deployado publicamente desde o primeiro dia, com observabilidade já ligada.
-
-- Scaffold Next.js, deploy inicial no Vercel (página vazia já no ar).
-- Projeto Supabase criado; ferramenta de migration versionada no repo (Supabase CLI).
-- Sentry e PostHog integrados desde já — captura erro e evento mesmo sem features reais ainda.
-- CI básico: lint + typecheck (+ testes, conforme forem existindo) rodando em PR.
-
-**Definition of done:** URL pública no ar, erro proposital em produção aparece no Sentry, um evento de pageview aparece no PostHog.
-
-## Fase 1 — Autenticação e multi-tenancy
-
-**Objetivo:** base de isolamento por workspace, que é requisito não-funcional (PRD seção 9), não feature opcional.
-
-- Supabase Auth (magic link), trigger de criação automática de `workspace` + `workspace_members(owner)` no primeiro signup.
-- RLS habilitado em todas as tabelas de domínio (mesmo antes delas terem dado real).
-
-**Definition of done:** teste automatizado que cria dois workspaces com usuários diferentes e confirma que um usuário **não consegue ler dado do outro workspace** via query direta — não é suficiente confiar que a política SQL "parece certa".
-
-## Fase 2 — Ingestão de reunião (sem IA)
-
-**Objetivo:** validar o caminho de dado ponta a ponta antes de acoplar custo de IA.
-
-- UI de colar texto / upload `.txt`/`.vtt`.
-- `meetings` criada com `status='pending'`, listagem/histórico por workspace (feature 6 do PRD, parcial).
-
-**Definition of done:** reunião aparece na listagem do workspace certo, isolada de outros workspaces (reusa o teste de RLS da Fase 1).
-
-## Fase 3 — Extração estruturada (etapa 1 do pipeline de IA)
-
-**Objetivo:** primeira chamada real à Claude API, isolada e testável antes de encadear as próximas.
-
-- Integração com Claude API, structured output/JSON schema.
-- Populamento de `findings` (bloqueios/riscos/dependências/decisões).
-- Log em `ai_calls` (tokens, latência) — visibilidade de custo desde a primeira chamada, não retroativa.
-
-**Definition of done:** reunião de teste gera findings corretos nos 4 tipos, custo da chamada visível em `ai_calls`.
-
-## Fase 4 — Recorrência entre reuniões
-
-**Objetivo:** feature 7 do PRD (diferencial de continuidade) — implementada e testada separadamente da IA, porque é lógica determinística (matching), não geração.
-
-- Matching por `pg_trgm` contra findings abertos do mesmo workspace/tipo.
-- Atribuição de `recurrence_group_id`.
-
-**Definition of done:** conjunto de reuniões sintéticas com o "mesmo" bloqueio descrito de formas diferentes é corretamente agrupado; bloqueios genuinamente distintos não são agrupados por engano (falso positivo é o erro mais caro aqui — risco #4 do PRD).
-
-## Fase 5 — Diagnóstico multi-perspectiva e síntese (etapas 2-3)
-
-**Objetivo:** fechar o pipeline completo de 3 etapas e o diferencial real do produto (seção 6 do PRD).
-
-- Lentes de diagnóstico (2-3, específicas de domínio) → `diagnostic_notes`.
-- Síntese executiva → `meetings.executive_summary` + `suggested_actions`.
-- Fluxo assíncrono completo: `status` na tabela + Supabase Realtime no frontend (ARCHITECTURE.md seção 3).
-
-**Definition of done:** usuário cola transcrição e, sem dar refresh, vê o status mudar de pending → processing → completed com resumo executivo, achados, diagnóstico e ações sugeridas renderizados.
-
-## Fase 6 — Dashboard de tendência
-
-**Objetivo:** feature 8 do PRD — visão agregada, não mais reunião-a-reunião.
-
-- Query agregada por `recurrence_group_id`: riscos abertos vs. resolvidos ao longo do tempo.
-
-**Definition of done:** dashboard reflete corretamente o estado de um workspace com múltiplas reuniões e ao menos um risco recorrente resolvido.
-
-## Fase 7 — Billing
-
-**Objetivo:** demonstrar capacidade de monetização (objetivo do PRD seção 3), sem bloquear o MVP core nisso.
-
-- Stripe Checkout em test mode, webhook atualizando `workspaces.plan`.
-- Gate de feature simples (ex.: limite de reuniões/mês no free) checado na API route.
-
-**Definition of done:** upgrade de plano via Checkout de teste reflete no `workspaces.plan` e libera o gate correspondente.
-
-## Fase 8 — Hardening para portfólio público
-
-**Objetivo:** o produto precisa sobreviver ao primeiro contato de um recrutador sem supervisão.
-
-- Estados vazios, estados de erro, dado de demonstração seedado (workspace de exemplo navegável sem precisar colar transcrição).
-- README do repositório contando a história do projeto (problema, pesquisa de mercado, decisões de arquitetura, honestidade sobre ser portfólio — PRD seção 3.2).
-- Domínio próprio (opcional, custo baixo — ver ARCHITECTURE.md/PRD seção 10).
-
-**Definition of done:** alguém sem contexto acessa o link, entende o que é em 30 segundos, e consegue ver o produto funcionando sem precisar de dado próprio.
+**Depends on:** PRD.md, ARCHITECTURE.md
+**Principles guiding the phase order:**
+- Instrument (errors + analytics) before writing product logic, not after — cheaper to do early than retroactively.
+- Vertical slice per phase: each phase delivers something that runs end to end and is deployable, not an isolated layer (e.g. not "whole schema first, whole UI later").
+- RLS and tenant isolation are tested explicitly as soon as they exist — it's a security requirement (PRD section 9), not an implementation detail to validate later.
+- AI is introduced across 3 separate phases (extraction → recurrence → diagnosis/synthesis), in the same increasing-cost order defined in ARCHITECTURE.md — each one testable in isolation before chaining the next.
+- Billing is the latest phase by PRD decision (8.2, post-MVP) — payment infrastructure only after the core product proves it works.
 
 ---
 
-## Fora deste roadmap (pós-MVP, PRD seção 8.2)
+## Phase 0 — Foundation and instrumentation
 
-Áudio, integração Jira/Linear, alertas proativos — deliberadamente não sequenciados aqui; entram como fases novas só depois do MVP validado.
+**Goal:** project skeleton publicly deployed from day one, with observability already wired in.
+
+- Next.js scaffold, initial deploy on Vercel (empty page already live).
+- Supabase project created; versioned migration tooling in the repo (Supabase CLI).
+- Sentry and PostHog integrated from the start — capture errors and events even before real features exist.
+- Basic CI: lint + typecheck (+ tests, as they come to exist) running on PR.
+
+**Definition of done:** public URL live, a deliberate production error shows up in Sentry, a pageview event shows up in PostHog.
+
+## Phase 1 — Authentication and multi-tenancy
+
+**Goal:** the per-workspace isolation foundation, which is a non-functional requirement (PRD section 9), not an optional feature.
+
+- Supabase Auth (magic link), trigger that auto-creates a `workspace` + `workspace_members(owner)` on first signup.
+- RLS enabled on every domain table (even before they hold real data).
+
+**Definition of done:** automated test that creates two workspaces with different users and confirms one user **cannot read the other workspace's data** via a direct query — trusting that the SQL policy "looks right" is not sufficient.
+
+## Phase 2 — Meeting ingestion (no AI)
+
+**Goal:** validate the end-to-end data path before attaching AI cost.
+
+- Paste-text / upload `.txt`/`.vtt` UI.
+- `meetings` created with `status='pending'`, listing/history per workspace (PRD feature 6, partial).
+
+**Definition of done:** the meeting shows up in the correct workspace's listing, isolated from other workspaces (reuses the Phase 1 RLS test).
+
+## Phase 3 — Structured extraction (AI pipeline stage 1)
+
+**Goal:** the first real Claude API call, isolated and testable before chaining the next ones.
+
+- Claude API integration, structured output/JSON schema.
+- Populates `findings` (blockers/risks/dependencies/decisions).
+- Logs to `ai_calls` (tokens, latency) — cost visibility from the first call, not bolted on later.
+
+**Definition of done:** a test meeting generates correct findings across all 4 types, call cost visible in `ai_calls`.
+
+## Phase 4 — Cross-meeting recurrence
+
+**Goal:** PRD feature 7 (the continuity differentiator) — implemented and tested separately from the AI, because it's deterministic logic (matching), not generation.
+
+- `pg_trgm` matching against open findings of the same workspace/type.
+- `recurrence_group_id` assignment.
+
+**Definition of done:** a set of synthetic meetings where the "same" blocker is described in different ways is correctly grouped; genuinely distinct blockers are not grouped by mistake (a false positive is the most costly error here — PRD risk #4).
+
+## Phase 5 — Multi-perspective diagnosis and synthesis (stages 2-3)
+
+**Goal:** close out the full 3-stage pipeline and the product's real differentiator (PRD section 6).
+
+- Diagnostic lenses (2-3, domain-specific) → `diagnostic_notes`.
+- Executive synthesis → `meetings.executive_summary` + `suggested_actions`.
+- Full async flow: `status` on the table + Supabase Realtime on the frontend (ARCHITECTURE.md section 3).
+
+**Definition of done:** a user pastes a transcript and, without refreshing, watches the status move from pending → processing → completed, with the executive summary, findings, diagnosis, and suggested actions rendered.
+
+## Phase 6 — Trend dashboard
+
+**Goal:** PRD feature 8 — an aggregate view, no longer meeting-by-meeting.
+
+- Query aggregated by `recurrence_group_id`: open vs. resolved risks over time.
+
+**Definition of done:** the dashboard correctly reflects the state of a workspace with multiple meetings and at least one resolved recurring risk.
+
+## Phase 7 — Billing
+
+**Goal:** demonstrate monetization capability (PRD section 3 goal), without blocking the core MVP on it.
+
+- Stripe Checkout in test mode, webhook updating `workspaces.plan`.
+- Simple feature gate (e.g. a meetings/month limit on the free plan) checked in the API route.
+
+**Definition of done:** a plan upgrade via test Checkout is reflected in `workspaces.plan` and unlocks the corresponding gate.
+
+## Phase 8 — Hardening for public portfolio use
+
+**Goal:** the product needs to survive a recruiter's first, unsupervised contact with it.
+
+- Empty states, error states, seeded demo data (a sample workspace browsable with no need to paste a transcript).
+- Repository README telling the project's story (problem, market research, architecture decisions, honesty about being a portfolio project — PRD section 3.2).
+- Custom domain (optional, low cost — see ARCHITECTURE.md/PRD section 10).
+
+**Definition of done:** someone with no context opens the link, understands what it is within 30 seconds, and can see the product working without needing their own data.
+
+---
+
+## Out of this roadmap (post-MVP, PRD section 8.2)
+
+Audio, Jira/Linear integration, proactive alerts — deliberately not sequenced here; they become new phases only after the MVP is validated.

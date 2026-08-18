@@ -1,61 +1,61 @@
-# Setup de Contas e Credenciais
+# Account and Credential Setup
 
-Passo a passo pra desbloquear a Fase 0 do ROADMAP.md (e o que vem depois). Cada seção diz onde clicar e em qual variável do `.env.example` colar o resultado. Nenhuma dessas contas foi criada ainda.
+Step-by-step to unblock Phase 0 of ROADMAP.md (and what comes after). Each section says where to click and which `.env.example` variable to paste the result into. None of these accounts exist yet.
 
-## Ordem recomendada
+## Recommended order
 
-Os quatro primeiros itens desbloqueiam a Fase 0. Os dois últimos só entram nas Fases 3 e 7 — pode deixar pra depois.
+The first four items unblock Phase 0. The last two only matter for Phases 3 and 7 — they can wait.
 
 ### 1. Vercel (hosting)
 
-1. Acesse [vercel.com](https://vercel.com) → **Sign Up** → entrar com a conta GitHub `ArturNunes21`.
-2. **Add New → Project** → selecione o repositório `scopelens`.
-3. Vercel detecta Next.js automaticamente. Não precisa configurar nada extra ainda — nenhuma env var é obrigatória pro primeiro deploy (Sentry/PostHog ficam inertes sem chave).
-4. **Deploy.** Isso já gera a URL pública (ex.: `scopelens.vercel.app`).
-5. Depois de mesclado o PR na `main`, todo push nela vira deploy de produção automaticamente; outras branches geram preview deploy.
+1. Go to [vercel.com](https://vercel.com) → **Sign Up** → sign in with the `ArturNunes21` GitHub account.
+2. **Add New → Project** → select the `scopelens` repository.
+3. Vercel auto-detects Next.js. No extra config needed yet — no env var is required for the first deploy (Sentry/PostHog stay inert without a key).
+4. **Deploy.** This already produces the public URL (e.g. `scopelens.vercel.app`).
+5. Once the PR is merged into `main`, every push to it becomes a production deploy automatically; other branches produce preview deploys.
 
-### 2. Supabase (banco/auth)
+### 2. Supabase (database/auth)
 
-1. Acesse [supabase.com](https://supabase.com) → **Sign Up** com GitHub.
-2. **New Project** → escolha nome (`scopelens`), senha do banco (guarde), região mais próxima.
-3. Aguarde provisionar (~2 min).
-4. Vá em **Project Settings → API** e copie:
+1. Go to [supabase.com](https://supabase.com) → **Sign Up** with GitHub.
+2. **New Project** → choose a name (`scopelens`), a database password (save it), and the closest region.
+3. Wait for provisioning (~2 min).
+4. Go to **Project Settings → API** and copy:
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (nunca expor no client)
+   - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (never expose on the client)
 
-### 3. Sentry (erro)
+### 3. Sentry (errors)
 
-1. Acesse [sentry.io](https://sentry.io) → **Sign Up**.
-2. **Create Project** → plataforma **Next.js**.
-3. A tela pós-criação mostra o **DSN** (`https://...@...ingest.sentry.io/...`).
-4. Cole o mesmo valor em `SENTRY_DSN` e `NEXT_PUBLIC_SENTRY_DSN`.
+1. Go to [sentry.io](https://sentry.io) → **Sign Up**.
+2. **Create Project** → platform **Next.js**.
+3. The post-creation screen shows the **DSN** (`https://...@...ingest.sentry.io/...`).
+4. Paste the same value into `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`.
 
 ### 4. PostHog (analytics)
 
-1. Acesse [posthog.com](https://posthog.com) → **Sign Up** (escolha região US ou EU — isso muda o host).
-2. Crie um projeto (`scopelens`).
-3. Vá em **Project Settings → Project API Key**, copie:
-   - a chave → `POSTHOG_KEY` e `NEXT_PUBLIC_POSTHOG_KEY`
-   - o host da região escolhida → `POSTHOG_HOST` e `NEXT_PUBLIC_POSTHOG_HOST` (`https://us.i.posthog.com` ou `https://eu.i.posthog.com`)
+1. Go to [posthog.com](https://posthog.com) → **Sign Up** (choose US or EU region — this changes the host).
+2. Create a project (`scopelens`).
+3. Go to **Project Settings → Project API Key**, copy:
+   - the key → `POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_KEY`
+   - the region's host → `POSTHOG_HOST` and `NEXT_PUBLIC_POSTHOG_HOST` (`https://us.i.posthog.com` or `https://eu.i.posthog.com`)
 
-### 5. Anthropic / Claude API (Fase 3 — extração de IA, não bloqueia Fase 0)
+### 5. Anthropic / Claude API (Phase 3 — AI extraction, doesn't block Phase 0)
 
-1. Acesse [console.anthropic.com](https://console.anthropic.com) → criar conta.
+1. Go to [console.anthropic.com](https://console.anthropic.com) → create an account.
 2. **API Keys → Create Key**.
-3. Cole em `ANTHROPIC_API_KEY`.
+3. Paste it into `ANTHROPIC_API_KEY`.
 
-### 6. Stripe (Fase 7 — billing, não bloqueia Fase 0)
+### 6. Stripe (Phase 7 — billing, doesn't block Phase 0)
 
-1. Acesse [dashboard.stripe.com](https://dashboard.stripe.com) → criar conta.
-2. Certifique-se que o toggle **Test mode** está ativo (canto superior).
-3. **Developers → API keys**, copie as chaves de teste (`sk_test_...`, `pk_test_...`) para `STRIPE_SECRET_KEY` e `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
-4. `STRIPE_WEBHOOK_SECRET` só é gerado quando o endpoint de webhook existir (fica pra quando a Fase 7 for implementada).
+1. Go to [dashboard.stripe.com](https://dashboard.stripe.com) → create an account.
+2. Make sure the **Test mode** toggle is on (top corner).
+3. **Developers → API keys**, copy the test keys (`sk_test_...`, `pk_test_...`) into `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+4. `STRIPE_WEBHOOK_SECRET` is only generated once the webhook endpoint exists (that happens when Phase 7 is implemented).
 
-## Depois de coletar as chaves
+## After collecting the keys
 
-Duas cópias precisam existir:
-- **Local:** `.env.local` na raiz do repo (nunca commitado — já está no `.gitignore`).
-- **Vercel:** Project Settings → Environment Variables, colar as mesmas chaves (senão o deploy de produção não tem acesso a elas).
+Two copies need to exist:
+- **Local:** `.env.local` at the repo root (never committed — already in `.gitignore`).
+- **Vercel:** Project Settings → Environment Variables, paste the same keys (otherwise the production deploy has no access to them).
 
-Depois de preenchido, me avise — eu confirmo que o app reconhece as variáveis (Sentry/PostHog saem do modo inerte) e seguimos pro resto da Fase 0.
+Once filled in, let me know — I'll confirm the app picks up the variables (Sentry/PostHog leave inert mode) and we move on with the rest of Phase 0.

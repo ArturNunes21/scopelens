@@ -1,28 +1,28 @@
-# Arquitetura Técnica — ScopeLens
+# Technical Architecture — ScopeLens
 
-**Depende de:** PRD.md (escopo e decisões fechadas em 8.3 e 10), CONTEXT.md
-**Status:** schema de dados e fluxo ponta a ponta para o MVP (Fase 1)
+**Depends on:** PRD.md (scope and decisions closed in 8.3 and 10), CONTEXT.md
+**Status:** data schema and end-to-end flow for the MVP (Phase 1)
 
 ---
 
-## 1. Visão geral
+## 1. Overview
 
-Stack: Next.js no Vercel (frontend + API routes) → Supabase (Postgres + Auth + Realtime + Storage) → Claude API (Anthropic) pro pipeline de IA → Stripe (billing, test mode) → Sentry (erro) + PostHog (analytics).
+Stack: Next.js on Vercel (frontend + API routes) → Supabase (Postgres + Auth + Realtime + Storage) → Claude API (Anthropic) for the AI pipeline → Stripe (billing, test mode) → Sentry (errors) + PostHog (analytics).
 
-Princípio de design que atravessa todo o resto deste documento: **nenhum componente novo de infraestrutura (fila, cache, banco vetorial separado) é necessário pro MVP.** Tudo é resolvido com Postgres (RLS, `pg_trgm`, `pgvector` quando necessário) e Supabase Realtime. Ver PRD.md seção 10 para a justificativa de cada área adiada.
+Design principle that runs through the rest of this document: **no new infrastructure component (queue, cache, separate vector database) is needed for the MVP.** Everything is handled with Postgres (RLS, `pg_trgm`, `pgvector` when needed) and Supabase Realtime. See PRD.md section 10 for the rationale behind each deferred area.
 
-## 2. Schema de dados
+## 2. Data Schema
 
-Todas as tabelas de domínio carregam `workspace_id` e têm RLS habilitado. Política padrão:
+Every domain table carries `workspace_id` and has RLS enabled. Default policy:
 
 ```sql
-create policy workspace_isolation on <tabela>
+create policy workspace_isolation on <table>
   using (workspace_id in (
     select workspace_id from workspace_members where user_id = auth.uid()
   ));
 ```
 
-### 2.1 Multi-tenancy e auth
+### 2.1 Multi-tenancy and auth
 
 ```
 workspaces
@@ -35,15 +35,15 @@ workspaces
 
 workspace_members
   workspace_id      uuid fk -> workspaces
-  user_id           uuid fk -> auth.users  (gerenciado pelo Supabase Auth)
+  user_id           uuid fk -> auth.users  (managed by Supabase Auth)
   role              text  -- 'owner' | 'admin' | 'member'
   created_at        timestamptz default now()
   primary key (workspace_id, user_id)
 ```
 
-`auth.users` é a tabela nativa do Supabase Auth — não recriamos usuário. Um trigger `on_auth_user_created` cria automaticamente um `workspace` + `workspace_members(role='owner')` no primeiro signup (padrão comum de onboarding sem fricção — resolve parte do risco #5 do PRD, fricção de adoção).
+`auth.users` is Supabase Auth's native table — we don't recreate the user. An `on_auth_user_created` trigger automatically creates a `workspace` + `workspace_members(role='owner')` row on first signup (a common frictionless-onboarding pattern — addresses part of PRD risk #5, adoption friction).
 
-### 2.2 Reuniões
+### 2.2 Meetings
 
 ```
 meetings
@@ -56,16 +56,16 @@ meetings
   occurred_at       timestamptz
   status            text default 'pending'   -- 'pending' | 'processing' | 'completed' | 'failed'
   error_message     text null
-  executive_summary text null   -- output da etapa de síntese (8.3)
+  executive_summary text null   -- output of the synthesis stage (8.3)
   created_by        uuid fk -> auth.users
   created_at        timestamptz default now()
 ```
 
-`status` é o mecanismo que substitui uma fila de jobs (ver seção 3). `transcript_raw` guarda o texto colado ou extraído do `.txt`/`.vtt`; não há processamento de áudio no MVP (decisão já fechada no PRD).
+`status` is the mechanism that replaces a job queue (see section 3). `transcript_raw` stores the pasted text or the content extracted from `.txt`/`.vtt`; there's no audio processing in the MVP (already a closed decision in the PRD).
 
-### 2.3 Findings (bloqueios, riscos, dependências, decisões)
+### 2.3 Findings (blockers, risks, dependencies, decisions)
 
-As quatro categorias da seção 8.1 #2 do PRD compartilham a mesma forma (descrição, responsável, status, rastreamento de recorrência) — uma única tabela tipada evita quatro tabelas quase-duplicadas:
+The four categories from PRD section 8.1 #2 share the same shape (description, owner, status, recurrence tracking) — a single typed table avoids four near-duplicate tables:
 
 ```
 findings
@@ -74,24 +74,24 @@ findings
   meeting_id          uuid fk -> meetings
   finding_type        text    -- 'blocker' | 'risk' | 'dependency' | 'decision'
   description         text
-  owner               text null            -- responsável citado na reunião, texto livre (não é FK de usuário do sistema)
-  decision_status      text null            -- só p/ finding_type='decision': 'taken' | 'pending'
+  owner               text null            -- owner mentioned in the meeting, free text (not a system-user FK)
+  decision_status      text null            -- only for finding_type='decision': 'taken' | 'pending'
   status              text default 'open'   -- 'open' | 'resolved'
-  recurrence_group_id uuid null fk -> findings(id)  -- aponta pra ocorrência "canônica" da mesma issue em reuniões anteriores; null = primeira ocorrência
-  embedding           vector(1536) null     -- populado só se/quando pgvector for ligado (ver 2.5); null no MVP inicial
+  recurrence_group_id uuid null fk -> findings(id)  -- points to the "canonical" occurrence of the same issue in earlier meetings; null = first occurrence
+  embedding           vector(1536) null     -- populated only if/when pgvector is turned on (see 2.5); null initially
   created_at          timestamptz default now()
 ```
 
-**Recorrência (feature 7 do PRD):** ao extrair findings de uma nova reunião, a etapa de matching busca findings abertos do mesmo workspace com `finding_type` igual e descrição parecida (`similarity(description, $novo) > threshold` via `pg_trgm`). Se encontrar, o novo registro herda o `recurrence_group_id` do mais antigo da cadeia (ou usa o próprio id do achado original, se for a 2ª ocorrência). O dashboard de tendência (feature 8) agrupa por `recurrence_group_id` e conta ocorrências.
+**Recurrence (PRD feature 7):** when extracting findings from a new meeting, the matching step looks for open findings in the same workspace with the same `finding_type` and a similar description (`similarity(description, $new) > threshold` via `pg_trgm`). If a match is found, the new record inherits the `recurrence_group_id` from the oldest one in the chain (or uses the original finding's own id, if it's the 2nd occurrence). The trend dashboard (feature 8) groups by `recurrence_group_id` and counts occurrences.
 
-### 2.4 Diagnóstico e sugestões
+### 2.4 Diagnosis and suggestions
 
 ```
 diagnostic_notes
   id            uuid pk
   workspace_id  uuid fk -> workspaces
   meeting_id    uuid fk -> meetings
-  lens          text    -- ex.: 'contradiction' | 'continuity' | 'decision_gap'
+  lens          text    -- e.g. 'contradiction' | 'continuity' | 'decision_gap'
   content       text
   related_finding_ids uuid[] null
   created_at    timestamptz default now()
@@ -106,9 +106,9 @@ suggested_actions
   created_at    timestamptz default now()
 ```
 
-### 2.5 Custo de IA (observabilidade do próprio pipeline)
+### 2.5 AI cost (the pipeline's own observability)
 
-Dado que custo por chamada é princípio explícito do produto (PRD seção 6/9), vale logar cada chamada, não só confiar no dashboard do provedor:
+Given that cost per call is an explicit product principle (PRD section 6/9), it's worth logging every call instead of relying solely on the provider's dashboard:
 
 ```
 ai_calls
@@ -122,56 +122,56 @@ ai_calls
   created_at    timestamptz default now()
 ```
 
-Isso também vira material de portfólio direto (seção 11 do PRD pede "decisões de arquitetura documentadas e justificáveis em entrevista" — ter dado real de custo por etapa é prova concreta do tiering de modelo).
+This also becomes direct portfolio material (PRD section 11 asks for "architecture decisions documented and defensible in an interview" — having real per-stage cost data is concrete proof of the model-tiering decision).
 
-### 2.6 Extensões Postgres necessárias
+### 2.6 Required Postgres extensions
 
-- `pg_trgm` — matching de recorrência por similaridade de texto (ligado desde o início do MVP).
-- `pgvector` — **não ligado no MVP inicial.** Fica pronto pra ligar (coluna `embedding` já existe, nullable) se o matching por `pg_trgm` se mostrar insuficiente. Não exige migração de tabela, só popular a coluna e trocar a query de matching.
+- `pg_trgm` — text-similarity matching for recurrence (enabled from the start of the MVP).
+- `pgvector` — **not enabled in the initial MVP.** Ready to enable (the `embedding` column already exists, nullable) if `pg_trgm` matching proves insufficient. Requires no table migration, just populating the column and swapping the matching query.
 
-## 3. Fluxo ponta a ponta
+## 3. End-to-End Flow
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuário (browser)
+    participant U as User (browser)
     participant V as Next.js (Vercel)
     participant S as Supabase (Postgres/Auth/Realtime)
     participant C as Claude API
 
-    U->>V: Cola transcrição / faz upload .txt/.vtt
+    U->>V: Pastes transcript / uploads .txt/.vtt
     V->>S: insert meetings (status='pending')
-    V-->>U: Realtime subscription na linha da reunião
-    V->>V: dispara processamento (mesma function, maxDuration estendido)
+    V-->>U: Realtime subscription on the meeting row
+    V->>V: kicks off processing (same function, extended maxDuration)
     V->>S: update meetings status='processing'
 
-    V->>C: Etapa 1 — Extração (modelo barato, JSON schema)
-    C-->>V: bloqueios, riscos, dependências, decisões, responsáveis
+    V->>C: Stage 1 — Extraction (cheap model, JSON schema)
+    C-->>V: blockers, risks, dependencies, decisions, owners
     V->>S: insert findings
-    V->>S: matching de recorrência (pg_trgm) -> recurrence_group_id
+    V->>S: recurrence matching (pg_trgm) -> recurrence_group_id
 
-    V->>C: Etapa 2 — Diagnóstico multi-perspectiva (modelo intermediário, 2-3 lentes)
-    C-->>V: diagnostic_notes por lente
+    V->>C: Stage 2 — Multi-perspective diagnosis (mid-tier model, 2-3 lenses)
+    C-->>V: diagnostic_notes per lens
     V->>S: insert diagnostic_notes
 
-    V->>C: Etapa 3 — Síntese executiva (modelo robusto)
-    C-->>V: resumo executivo + ações sugeridas
+    V->>C: Stage 3 — Executive synthesis (most capable model)
+    C-->>V: executive summary + suggested actions
     V->>S: update meetings.executive_summary, insert suggested_actions
-    V->>S: insert ai_calls (custo/latência de cada etapa)
+    V->>S: insert ai_calls (cost/latency per stage)
 
     V->>S: update meetings status='completed'
     S-->>U: Realtime push (status='completed')
-    U->>V: Renderiza resumo, findings, diagnóstico, ações, dashboard
+    U->>V: Renders summary, findings, diagnosis, actions, dashboard
 ```
 
-Pontos de desenho que valem registrar:
+Design points worth calling out:
 
-- **Sem fila/Redis:** o processamento roda na própria function que recebeu o upload (Vercel Fluid Compute / `maxDuration` estendido cobre os ~3 calls encadeados de uma única reunião). Se o volume crescer a ponto de justificar fila assíncrona de verdade, isso é uma mudança isolada na function de processamento — não afeta schema nem frontend, porque o contrato já é "status na tabela + Realtime".
-- **Sem polling manual:** o frontend não fica perguntando "terminou?" — assina a linha via Supabase Realtime e reage à mudança de `status`.
-- **RLS em toda leitura:** o dashboard (feature 8) e o histórico (feature 6) são só queries agregadas sobre `findings`/`meetings` filtradas por RLS — nenhuma lógica de isolamento de tenant vive na aplicação.
-- **Billing:** Stripe Checkout (test mode) → webhook em API route → atualiza `workspaces.plan`/`stripe_subscription_id`. Gate de feature (ex.: limite de reuniões/mês no free) é checado na API route antes de aceitar novo `insert` em `meetings`, refletindo o campo `plan`.
+- **No queue/Redis:** processing runs in the same function that received the upload (Vercel Fluid Compute / extended `maxDuration` covers the ~3 chained calls for a single meeting). If volume grows enough to justify a real async queue, that's an isolated change to the processing function — it doesn't touch the schema or the frontend, because the contract is already "status on the table + Realtime."
+- **No manual polling:** the frontend doesn't keep asking "is it done yet?" — it subscribes to the row via Supabase Realtime and reacts to the `status` change.
+- **RLS on every read:** the dashboard (feature 8) and history (feature 6) are just aggregate queries over `findings`/`meetings` filtered by RLS — no tenant-isolation logic lives in the application.
+- **Billing:** Stripe Checkout (test mode) → webhook in an API route → updates `workspaces.plan`/`stripe_subscription_id`. A feature gate (e.g. a meetings/month limit on the free plan) is checked in the API route before accepting a new `insert` into `meetings`, reflecting the `plan` field.
 
-## 4. O que este documento não cobre (fica pro roadmap)
+## 4. Not Covered in This Document (belongs to the roadmap)
 
-- Sequenciamento de fases de implementação.
-- Prompts exatos de cada etapa do pipeline de IA.
-- Critério de sucesso técnico mensurável (item 5 pendente na seção 12 do PRD).
+- Implementation phase sequencing.
+- Exact prompts for each stage of the AI pipeline.
+- Measurable technical success criteria (closed in PRD.md section 11.1).

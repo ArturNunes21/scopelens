@@ -1,104 +1,104 @@
-# Contexto do Projeto: ScopeLens
+# Project Context: ScopeLens
 
-> Este arquivo existe para dar contexto completo ao Claude Code (Cursor) sobre o projeto, sem precisar repetir tudo em prompt. Referencie com `@CONTEXT.md`.
+> This file exists to give Claude Code (Cursor) full context on the project without repeating everything in every prompt. Reference it with `@CONTEXT.md`.
 
-## 1. Quem sou eu
+## 1. Who I am
 
-Artur Nunes Oliveira Resende — estudante do último ano de Ciência da Computação (PUC Goiás), estagiário de Analytics Engineering na Indicium. Foco em modelagem de dados, ETL/ELT e Modern Data Stack (SQL avançado, Python intermediário, Snowflake, Databricks, dbt, Airflow, Power BI, Git/Bitbucket). Certificação Databricks Certified Data Analyst Associate.
+Artur Nunes Oliveira Resende — final-year Computer Science student (PUC Goiás), Analytics Engineering intern at Indicium. Focused on data modeling, ETL/ELT, and the Modern Data Stack (advanced SQL, intermediate Python, Snowflake, Databricks, dbt, Airflow, Power BI, Git/Bitbucket). Databricks Certified Data Analyst Associate.
 
-**Como trabalhar comigo:** direto ao ponto, sem explicar conceitos básicos de dados/SQL/versionamento. Foco em decisões de design, eficiência, escalabilidade e código. Postura crítica — corrigir imediatamente se eu sugerir algo abaixo de boa prática de mercado.
+**How to work with me:** straight to the point, no need to explain basic data/SQL/version-control concepts. Focus on design decisions, efficiency, scalability, and code. Take a critical stance — correct me immediately if I suggest something below market best practice.
 
-## 2. Objetivo do projeto
+## 2. Project goal
 
-Projeto de portfólio para vaga de dados, mostrando: uso prático de IA para construir produto de ponta a ponta, multidisciplinaridade (back, front, dados, segurança, IA), capacidade de ter uma ideia original a partir de demanda real de mercado, e noção de monetização/venda de produto.
+Portfolio project for a data role, showing: practical use of AI to build a product end to end, multidisciplinary skill (backend, frontend, data, security, AI), ability to turn a real market need into an original idea, and awareness of product monetization/sales.
 
-**Importante:** o objetivo é experiência e portfólio, não necessariamente tração comercial real. Isso deve ser reconhecido de forma honesta na documentação e em entrevistas.
+**Important:** the goal is experience and portfolio, not necessarily real commercial traction. This should be acknowledged honestly in the documentation and in interviews.
 
-## 3. O produto: ScopeLens
+## 3. The product: ScopeLens
 
-### 3.1 O que é
+### 3.1 What it is
 
-ScopeLens é um **analista de projeto assistido por IA**. Ele recebe a transcrição de uma reunião (daily, planning, retro, kickoff) e não só resume — ele **analisa** o projeto como um analista técnico sênior faria: identifica o que está indo mal, o que está sendo dito nas entrelinhas, o que falta ser decidido, e o que provavelmente vai virar problema se ninguém agir.
+ScopeLens is an **AI-assisted project analyst**. It takes the transcript of a meeting (daily, planning, retro, kickoff) and doesn't just summarize it — it **analyzes** the project the way a senior technical analyst would: identifies what's going wrong, what's being said between the lines, what's still undecided, and what will likely become a problem if no one acts.
 
-### 3.2 Objetivo
+### 3.2 Objective
 
-Resolver dois problemas ao mesmo tempo:
-1. **Barreira de linguagem** entre quem executa (dev) e quem decide/reporta (gestor, PM, stakeholder não-técnico).
-2. **Cegueira de continuidade** — reuniões são eventos isolados; ninguém junta os pontos entre "esse bloqueio já apareceu na daily de segunda, quarta e hoje" ao longo do tempo. O ScopeLens é o "analista" que participa de todas as reuniões, lembra de todas as anteriores, e enxerga o padrão que ninguém tem tempo de rastrear manualmente.
+Solve two problems at once:
+1. **Language barrier** between whoever executes (devs) and whoever decides/reports (manager, PM, non-technical stakeholder).
+2. **Continuity blindness** — meetings are isolated events; no one connects the dots between "this blocker already came up in Monday's, Wednesday's, and today's daily" over time. ScopeLens is the "analyst" who attends every meeting, remembers all the previous ones, and spots the pattern no one has time to track manually.
 
-### 3.3 O papel da IA no produto
+### 3.3 The role of AI in the product
 
-A IA não é só um resumidor de texto. As funções centrais dela são:
-- **Extrair** dados estruturados de uma conversa não-estruturada (bloqueios, riscos, dependências, decisões tomadas, decisões pendentes, responsáveis).
-- **Traduzir** esses dados pra linguagem que um stakeholder não-técnico entende, sem perder a substância técnica.
-- **Diagnosticar** — apontar falhas, riscos e dependências que não foram ditas explicitamente, mas que um analista experiente perceberia (ex: "dois participantes descreveram a mesma tarefa de formas incompatíveis" → risco de retrabalho).
-- **Sugerir** próximos passos ou perguntas que o gestor deveria fazer antes da próxima reunião.
-- **Acompanhar** a evolução de cada risco/bloqueio ao longo de várias reuniões, não só relatar o que aconteceu numa reunião isolada.
+AI isn't just a text summarizer. Its core functions are:
+- **Extract** structured data from an unstructured conversation (blockers, risks, dependencies, decisions made, pending decisions, owners).
+- **Translate** that data into language a non-technical stakeholder understands, without losing the technical substance.
+- **Diagnose** — surface failures, risks, and dependencies that weren't explicitly stated, but that an experienced analyst would notice (e.g. "two participants described the same task in incompatible ways" → rework risk).
+- **Suggest** next steps or questions the manager should ask before the next meeting.
+- **Track** the evolution of each risk/blocker across multiple meetings, not just report what happened in one isolated meeting.
 
-**Sobre o método de análise (decidido):** a ideia das "5 vozes" (contrário, first principles, expansionista, forasteiro, executor) citada nas conversas anteriores é uma **skill nativa do Claude**, usada só como referência de inspiração — não foi adotada como está. Decisão final: variação própria, com 2-3 lentes específicas de domínio (não as 5 personas genéricas), rodando em pipeline de 3 etapas com tiering de modelo — extração (barato) → diagnóstico multi-perspectiva (intermediário) → síntese executiva (robusto). Ver PRD.md seção 8.3 para justificativa completa.
+**On the analysis method (decided):** the "5 voices" idea (contrarian, first principles, expansionist, outsider, executor) mentioned in earlier conversations is a **native Claude skill**, used only as an inspiration reference — it was not adopted as-is. Final decision: a custom variation with 2-3 domain-specific lenses (not the 5 generic personas), running in a 3-stage pipeline with model tiering — extraction (cheap) → multi-perspective diagnosis (mid-tier) → executive synthesis (robust). See PRD.md section 8.3 for the full rationale.
 
-### 3.4 Funcionalidades — MVP (Fase 1)
+### 3.4 Features — MVP (Phase 1)
 
-1. **Ingestão de reunião** — colar texto ou upload de `.txt`/`.vtt` de transcrição.
-2. **Extração estruturada** — bloqueios, riscos, dependências, decisões e responsáveis identificados automaticamente.
-3. **Resumo executivo** — tradução da reunião pra linguagem de negócio, sem jargão técnico.
-4. **Análise diagnóstica** — a IA aponta riscos/falhas/dependências não ditas explicitamente (método de análise ainda em definição, ver 3.3).
-5. **Sugestões acionáveis** — lista de próximos passos ou perguntas recomendadas pela IA.
-6. **Histórico por workspace** — todas as reuniões analisadas ficam salvas e associadas ao projeto/time.
-7. **Tracking de recorrência** — a IA cruza reuniões ao longo do tempo e sinaliza riscos/bloqueios que reaparecem (ex: "esse bloqueio já foi mencionado 3 vezes").
-8. **Dashboard simples de tendência** — visão de riscos abertos vs. resolvidos ao longo das sprints.
-9. **Autenticação e multi-tenancy** — cada time/empresa tem seu workspace isolado.
+1. **Meeting ingestion** — paste text or upload a `.txt`/`.vtt` transcript.
+2. **Structured extraction** — blockers, risks, dependencies, decisions, and owners identified automatically.
+3. **Executive summary** — translation of the meeting into business language, no technical jargon.
+4. **Diagnostic analysis** — the AI surfaces risks/failures/dependencies that weren't explicitly stated (see 3.3 for the analysis method).
+5. **Actionable suggestions** — list of next steps or questions recommended by the AI.
+6. **Per-workspace history** — every analyzed meeting is saved and tied to the project/team.
+7. **Recurrence tracking** — the AI cross-references meetings over time and flags risks/blockers that reappear (e.g. "this blocker has already been mentioned 3 times").
+8. **Simple trend dashboard** — view of open vs. resolved risks across sprints.
+9. **Authentication and multi-tenancy** — each team/company has its own isolated workspace.
 
-### 3.5 Visão de produto — pós-MVP (não compromissado ainda)
+### 3.5 Product vision — post-MVP (not committed yet)
 
-- Upload/gravação de áudio (fase 2, condicionado a validação do MVP em texto).
-- Integração direta com Jira/Linear, cruzando dado de ticket com dado de reunião — esse cruzamento é um diferencial real frente a concorrentes que só usam um tipo de fonte (ver seção 4).
-- Alertas proativos (ex: Slack) quando um risco atinge um número de recorrências.
-- Camada de billing/planos pagos.
+- Audio upload/recording (phase 2, conditioned on validating the text-based MVP).
+- Direct Jira/Linear integration, cross-referencing ticket data with meeting data — this is a real differentiator against competitors who only use one type of source (see section 4).
+- Proactive alerts (e.g. Slack) when a risk hits a recurrence threshold.
+- Paid billing/plans layer.
 
-## 4. Pesquisa de mercado (resumo)
+## 4. Market research (summary)
 
-**Concorrentes diretos de notetaker:** Fireflies, Otter, Fathom, Granola, Zoom AI Companion, Read.ai. Mercado saturado, guerra de preço. Problemas relatados: resumos rasos/genéricos, imprecisão de transcrição, e risco jurídico real (ações BIPA contra Fireflies/Otter por gravação sem consentimento; Cornell bloqueia esses bots).
+**Direct notetaker competitors:** Fireflies, Otter, Fathom, Granola, Zoom AI Companion, Read.ai. Saturated market, price war. Reported problems: shallow/generic summaries, transcription inaccuracy, and real legal risk (BIPA lawsuits against Fireflies/Otter for recording without consent; Cornell blocks these bots).
 
-**Concorrente mais perigoso:** categoria "Software Engineering Intelligence" (Jellyfish, LinearB, Swarmia, GetDX, Faros AI) — já resolve "traduzir engenharia pra negócio" para CTO/VP, mas usando dados de Git/Jira/CI-CD (mais confiável que transcrição). Vendido enterprise (free tier até 6 dígitos/ano). Existe até um plugin de Jira ("Leiga") que já faz risco previsto + relatório de progresso com um clique, sem transcrição nenhuma.
+**Most dangerous competitor:** the "Software Engineering Intelligence" category (Jellyfish, LinearB, Swarmia, GetDX, Faros AI) — already solves "translating engineering into business terms" for CTOs/VPs, but using Git/Jira/CI-CD data (more reliable than transcripts). Sold enterprise (free tier up to six-figure contracts). There's even a Jira plugin ("Leiga") that already does predicted risk + progress report in one click, no transcript at all.
 
-**Decisão de posicionamento:** não competir como "dashboard de BI de engenharia" (perdido contra SEI platforms). Focar em "copiloto de decisão pontual" sobre reunião específica — o modo 5 vozes é o diferencial real, pouco coberto por concorrentes.
+**Positioning decision:** don't compete as an "engineering BI dashboard" (loses against SEI platforms). Focus on a "point-in-time decision copilot" for a specific meeting — the 5-voices-style mode is the real differentiator, barely covered by competitors.
 
-## 5. 10 riscos mapeados (pra mitigar ou reconhecer no roadmap)
+## 5. 10 mapped risks (to mitigate or acknowledge in the roadmap)
 
-1. Concorrência estabelecida (Jellyfish/LinearB/Swarmia) com fonte de dado mais confiável.
-2. Mercado de notetaker saturado.
-3. Comprador errado (quem sente a dor não decide orçamento).
-4. Custo alto de falso positivo/negativo em "risco" identificado por IA.
-5. Fricção de adoção (exigir colar transcrição / abrir outro site).
-6. Dependência de terceiros pra qualidade da transcrição (Zoom/Meet/Teams).
-7. Efeito "Big Brother" — resistência de devs se sentirem vigiados.
-8. Ciclo de venda B2B lento.
-9. Monetização fraca em squads pequenos.
-10. Vantagem técnica replicável (LLMs generalistas já fazem 80% disso de graça).
+1. Established competition (Jellyfish/LinearB/Swarmia) with a more reliable data source.
+2. Saturated notetaker market.
+3. Wrong buyer (whoever feels the pain doesn't decide the budget).
+4. High cost of AI-identified "risk" false positive/negative.
+5. Adoption friction (requiring pasting a transcript / opening another site).
+6. Third-party dependency for transcription quality (Zoom/Meet/Teams).
+7. "Big Brother" effect — devs resisting the feeling of being watched.
+8. Slow B2B sales cycle.
+9. Weak monetization in small squads.
+10. Replicable technical advantage (general-purpose LLMs already do 80% of this for free).
 
-## 6. Escopo do MVP (decisões já tomadas)
+## 6. MVP scope (decisions already made)
 
-- **Sem ingestão de áudio no MVP.** Entrada é texto colado ou upload de `.txt`/`.vtt` — aproveita transcrição nativa gratuita de Zoom/Meet/Teams. Elimina custo de STT e problema de consentimento/gravação.
-- **Áudio é feature de fase 2** (stretch goal), usando **Groq API** (Whisper Large v3 Turbo, tier gratuito generoso) se decidirmos incluir.
-- **Estratégia de custo por chamada de IA (decidida):** pipeline de 3 etapas com tiering de modelo — extração estruturada (modelo barato/rápido) → diagnóstico multi-perspectiva com 2-3 lentes (modelo intermediário) → síntese executiva (modelo mais robusto, é o que o usuário efetivamente lê). Ver 3.3 e PRD.md seção 8.3.
+- **No audio ingestion in the MVP.** Input is pasted text or a `.txt`/`.vtt` upload — leverages Zoom/Meet/Teams' free native transcription. Eliminates STT cost and the consent/recording problem.
+- **Audio is a phase 2 feature** (stretch goal), using **Groq API** (Whisper Large v3 Turbo, generous free tier) if we decide to include it.
+- **AI cost-per-call strategy (decided):** 3-stage pipeline with model tiering — structured extraction (cheap/fast model) → multi-perspective diagnosis with 2-3 lenses (mid-tier model) → executive synthesis (most capable model, what the user actually reads). See 3.3 and PRD.md section 8.3.
 
-## 7. Stack técnico — **DECIDIDO**
+## 7. Tech stack — **DECIDED**
 
-Princípio geral: free tier / test mode por padrão em toda a stack; upgrade pago é troca de configuração, não migração. Justificativa completa de cada escolha em PRD.md seção 10.
+General principle: free tier / test mode by default across the whole stack; a paid upgrade is a configuration change, not a migration. Full rationale for each choice in PRD.md section 10.
 
 - Frontend/hosting: Vercel (free tier)
-- Backend/DB/Auth: Supabase (free tier; RLS nativo atende requisito de isolamento por workspace; mitigação de sleep após 7 dias de inatividade via cron gratuito)
-- Provedor de LLM: Claude (Anthropic API), com tiering de modelo por etapa do pipeline (ver seção 6)
-- Billing: Stripe, em test mode até haver demanda paga real
-- Observabilidade/erro: Sentry (free tier)
-- Product analytics: PostHog (free tier; surveys nativos cobrem feedback, sem ferramenta extra)
-- STT (fase 2, se necessário): Groq API
-- Editor/dev: Cursor (Claude Code integrado)
-- Versionamento: GitHub, repositório `scopelens`, público, license MIT, `.gitignore` template Node
+- Backend/DB/Auth: Supabase (free tier; native RLS meets the per-workspace isolation requirement; sleep-after-7-days-inactivity mitigated with a free cron)
+- LLM provider: Claude (Anthropic API), with model tiering per pipeline stage (see section 6)
+- Billing: Stripe, in test mode until there's real paid demand
+- Observability/errors: Sentry (free tier)
+- Product analytics: PostHog (free tier; native surveys cover feedback, no extra tool)
+- STT (phase 2, if needed): Groq API
+- Editor/dev: Cursor (Claude Code integrated)
+- Version control: GitHub, `scopelens` repository, public, MIT license, Node `.gitignore` template
 
-**Adiado conscientemente, sem risco de retrabalho** (avaliado e justificado em PRD.md seção 10): vector DB (coberto por `pgvector` no próprio Supabase quando necessário), Redis/fila de jobs (não necessário — status na tabela + Supabase Realtime), DNS/domínio próprio (custo opcional, não é decisão de arquitetura), email transacional (Supabase Auth cobre o MVP; revisitar só na feature de alertas proativos pós-MVP).
+**Deliberately deferred, no rework risk** (evaluated and justified in PRD.md section 10): vector DB (covered by `pgvector` in Supabase itself when needed), Redis/job queue (not needed — status on the table + Supabase Realtime), DNS/custom domain (optional cost, not an architecture decision), transactional email (Supabase Auth covers the MVP; revisit only for the post-MVP proactive-alerts feature).
 
-## 8. Próximos passos
+## 8. Current status and next steps
 
-Ainda **não começamos a codar**. Estamos na fase de documentação/escopo dentro do repositório (Markdown), antes de qualquer implementação. Método de análise de IA e stack técnica já decididos (ver seções 3.3, 6 e 7). Próximo passo: documento de arquitetura técnica (schema de dados, fluxo ponta a ponta) em ARCHITECTURE.md, seguido de roadmap de implementação em fases.
+Planning is closed: product scope, AI method, tech stack, data schema, end-to-end flow, and phased roadmap are all documented (PRD.md, ARCHITECTURE.md, ROADMAP.md, TODO.md). Phase 0 of the roadmap is in progress — Next.js scaffold, CI, and env-gated Sentry/PostHog instrumentation are done; what's left needs manual account creation on Vercel/Supabase/Sentry/PostHog (see SETUP.md), which can't be automated. Track phase-by-phase progress in TODO.md.
