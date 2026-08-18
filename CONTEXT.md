@@ -18,7 +18,9 @@ Portfolio project for a data role, showing: practical use of AI to build a produ
 
 ### 3.1 What it is
 
-ScopeLens is an **AI-assisted project analyst**. It takes the transcript of a meeting (daily, planning, retro, kickoff) and doesn't just summarize it — it **analyzes** the project the way a senior technical analyst would: identifies what's going wrong, what's being said between the lines, what's still undecided, and what will likely become a problem if no one acts.
+ScopeLens is an **AI-assisted project analyst**. It takes unstructured project sources — starting with meeting transcripts (daily, planning, retro, kickoff) in the MVP, with meeting minutes/PDF/Markdown/docs planned as later source types — and doesn't just summarize them: it **analyzes** the project the way a senior technical analyst would: identifies what's going wrong, what's being said between the lines, what's still undecided, and what will likely become a problem if no one acts.
+
+**Core differentiator, explicitly: diagnostic analysis of unstructured project sources, not language translation.** Translating findings into business language is a valuable presentation feature, but it's not what makes the product different from a generic summarizer — the analysis itself is. See PRD.md section 6.
 
 ### 3.2 Objective
 
@@ -39,10 +41,10 @@ AI isn't just a text summarizer. Its core functions are:
 
 ### 3.4 Features — MVP (Phase 1)
 
-1. **Meeting ingestion** — paste text or upload a `.txt`/`.vtt` transcript.
+1. **Meeting ingestion (first source type)** — paste text or upload a `.txt`/`.vtt` transcript; the analysis engine is designed to extend to other document types later (see 3.5).
 2. **Structured extraction** — blockers, risks, dependencies, decisions, and owners identified automatically.
-3. **Executive summary** — translation of the meeting into business language, no technical jargon.
-4. **Diagnostic analysis** — the AI surfaces risks/failures/dependencies that weren't explicitly stated (see 3.3 for the analysis method).
+3. **Executive summary** — translates the analysis into business language, no technical jargon — a presentation layer on top of the diagnostic analysis, not the differentiator itself.
+4. **Diagnostic analysis** — the AI surfaces risks/failures/dependencies that weren't explicitly stated — the product's actual differentiator (see 3.3 for the analysis method).
 5. **Actionable suggestions** — list of next steps or questions recommended by the AI.
 6. **Per-workspace history** — every analyzed meeting is saved and tied to the project/team.
 7. **Recurrence tracking** — the AI cross-references meetings over time and flags risks/blockers that reappear (e.g. "this blocker has already been mentioned 3 times").
@@ -51,6 +53,7 @@ AI isn't just a text summarizer. Its core functions are:
 
 ### 3.5 Product vision — post-MVP (not committed yet)
 
+- **Multi-format source ingestion** — PDF meeting minutes, Markdown docs, Google Docs, and other unstructured project documentation, feeding the same analysis pipeline as meeting transcripts. This is the direct extension of the core differentiator (3.1): the analysis engine is source-agnostic by design, the MVP just starts with one source type to validate the concept cheaply.
 - Audio upload/recording (phase 2, conditioned on validating the text-based MVP).
 - Direct Jira/Linear integration, cross-referencing ticket data with meeting data — this is a real differentiator against competitors who only use one type of source (see section 4).
 - Proactive alerts (e.g. Slack) when a risk hits a recurrence threshold.
@@ -62,7 +65,7 @@ AI isn't just a text summarizer. Its core functions are:
 
 **Most dangerous competitor:** the "Software Engineering Intelligence" category (Jellyfish, LinearB, Swarmia, GetDX, Faros AI) — already solves "translating engineering into business terms" for CTOs/VPs, but using Git/Jira/CI-CD data (more reliable than transcripts). Sold enterprise (free tier up to six-figure contracts). There's even a Jira plugin ("Leiga") that already does predicted risk + progress report in one click, no transcript at all.
 
-**Positioning decision:** don't compete as an "engineering BI dashboard" (loses against SEI platforms). Focus on a "point-in-time decision copilot" for a specific meeting — the 5-voices-style mode is the real differentiator, barely covered by competitors.
+**Positioning decision:** don't compete as an "engineering BI dashboard" (loses against SEI platforms). Focus on a "point-in-time decision copilot" — diagnostic analysis of unstructured project sources (not just meetings, eventually docs/PDFs/minutes too) is the real differentiator, barely covered by competitors; business-language translation is a presentation feature on top of it, not the differentiator itself.
 
 ## 5. 10 mapped risks (to mitigate or acknowledge in the roadmap)
 

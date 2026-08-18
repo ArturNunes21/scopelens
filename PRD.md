@@ -49,9 +49,13 @@ ScopeLens does not compete as an engineering BI dashboard (it would lose against
 
 ## 6. Value Proposition / Differentiator
 
-- Cross-referencing multiple meetings over time to identify recurring risk (not covered by generic notetakers, which treat each meeting in isolation).
-- A qualitative data source (conversation) that complements — not competes with — the structured data source (ticket/commit) that SEI platforms already exploit well.
-- Future potential to cross-reference both sources (meeting + ticket), which no mapped competitor does today (see section 8.2).
+**The core differentiator is diagnostic analysis of unstructured project sources, not language translation.** Translating findings into business language is a presentation feature that makes the analysis usable by non-technical stakeholders — it is not, by itself, what makes ScopeLens different from a generic summarizer. The actual differentiator is deep, structured analysis (risk, contradiction, decision gaps, recurrence) applied to *any* qualitative source that describes a project's state, not just a meeting transcript.
+
+- **Source-agnostic qualitative analysis.** The MVP starts with meeting transcripts (simplest to validate), but the analysis engine is designed to extend to meeting minutes, PDFs, Markdown docs, and other unstructured project documentation (see 8.2) — not tied to any single input format.
+- **Cross-referencing over time** to identify recurring risk (not covered by generic notetakers, which treat each meeting/document in isolation).
+- **A qualitative data source (natural language)** that complements — not competes with — the structured data source (ticket/commit) that SEI platforms already exploit well. This is the gap those platforms don't cover: they parse structured systems, not free-form project narrative.
+- **Future potential to cross-reference both** (qualitative narrative + structured tickets), which no mapped competitor does today (see section 8.2).
+- Business-language translation of the findings is a real, valuable feature (it's what makes the analysis usable by a non-technical stakeholder) — but it rides on top of the diagnostic analysis, not the other way around.
 
 ## 7. Mapped Risks
 
@@ -76,10 +80,10 @@ ScopeLens does not compete as an engineering BI dashboard (it would lose against
 
 | # | Feature | Description |
 |---|---|---|
-| 1 | Meeting ingestion | Paste text or upload a `.txt` / `.vtt` transcript |
+| 1 | Meeting ingestion (first source type) | Paste text or upload a `.txt` / `.vtt` transcript — the MVP's initial source; the analysis engine is designed to extend to other document types later (see 8.2) |
 | 2 | Structured extraction | Blockers, risks, dependencies, decisions, and owners identified automatically |
-| 3 | Executive summary | Translation of the meeting into business language, no technical jargon |
-| 4 | Diagnostic analysis | AI surfaces risks/failures/dependencies that weren't explicitly stated — see 8.3 for the analysis method |
+| 3 | Executive summary | Translates the analysis into business language, no technical jargon — a presentation feature on top of the diagnostic analysis (section 6), not the core differentiator itself |
+| 4 | Diagnostic analysis | AI surfaces risks/failures/dependencies that weren't explicitly stated — the product's actual differentiator, see 8.3 for the analysis method |
 | 5 | Actionable suggestions | List of next steps or questions recommended by the AI |
 | 6 | Per-workspace history | Analyzed meetings are saved and tied to the project/team |
 | 7 | Recurrence tracking | Cross-referencing meetings over time, flagging recurring risks/blockers |
@@ -88,8 +92,9 @@ ScopeLens does not compete as an engineering BI dashboard (it would lose against
 
 ### 8.2 Product vision — post-MVP (not committed)
 
+- **Multi-format source ingestion** — PDF meeting minutes, Markdown docs, Google Docs, and other unstructured project documentation, feeding the same analysis pipeline as meeting transcripts. This is the direct extension of the core differentiator (section 6): the analysis engine is source-agnostic by design, the MVP just starts with one source type to validate the concept cheaply.
 - Audio upload/recording (conditioned on validating the text-based MVP)
-- Jira/Linear integration, cross-referencing ticket data with meeting data
+- Jira/Linear integration, cross-referencing ticket data with the qualitative sources above
 - Proactive alerts (e.g. Slack) when a risk hits a recurrence threshold
 - Paid billing/plans layer
 
@@ -180,3 +185,4 @@ No open planning decisions at this time. Next step is execution per ROADMAP.md, 
 | Working environment | Decided to use Cursor + Claude Code for AI-assisted development |
 | AI analysis method | Custom variation with domain-specific lenses (extraction → multi-perspective diagnosis → synthesis), not the native "5 voices" skill nor a persona-free pipeline — see section 8.3 |
 | Tech stack | Vercel + Supabase + Claude API + Stripe (test mode) + Sentry + PostHog, all on free tier/test mode with migration-free upgrade path — see section 10 |
+| Value proposition reframed | Core differentiator repositioned from "meeting-to-business-language translation" to "diagnostic analysis of unstructured project sources" (translation is a presentation feature on top of it); multi-format source ingestion (PDF/Markdown/docs) added to the post-MVP vision as the natural extension — see section 6 and 8.2 |

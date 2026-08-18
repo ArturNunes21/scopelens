@@ -99,4 +99,4 @@
 
 ## Out of this roadmap (post-MVP, PRD section 8.2)
 
-Audio, Jira/Linear integration, proactive alerts — deliberately not sequenced here; they become new phases only after the MVP is validated.
+Multi-format source ingestion (PDF/Markdown/docs — the natural extension of the analysis engine beyond meeting transcripts, see PRD section 6), audio, Jira/Linear integration, proactive alerts — deliberately not sequenced here; they become new phases only after the MVP is validated.

@@ -60,4 +60,4 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ---
 
-Out of the roadmap for now (post-MVP, `PRD.md` section 8.2): audio, Jira/Linear integration, proactive alerts.
+Out of the roadmap for now (post-MVP, `PRD.md` section 8.2): multi-format source ingestion (PDF/Markdown/docs), audio, Jira/Linear integration, proactive alerts.
