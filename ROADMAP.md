@@ -7,6 +7,7 @@
 - RLS and tenant isolation are tested explicitly as soon as they exist — it's a security requirement (PRD section 9), not an implementation detail to validate later.
 - AI is introduced across 3 separate phases (extraction → recurrence → diagnosis/synthesis), in the same increasing-cost order defined in ARCHITECTURE.md — each one testable in isolation before chaining the next.
 - Billing is the latest phase by PRD decision (8.2, post-MVP) — payment infrastructure only after the core product proves it works.
+- **UI/UX detail is specified per phase, right before that phase is built — not upfront.** PRD.md defines *what* each feature does (e.g. feature 8, trend dashboard: open vs. resolved risks over time); the exact charts, metrics, and layout are decided when the phase starts, informed by the real shape of data produced by earlier phases. Deciding this too early risks designing around guessed data instead of real data from Phases 3-4, causing rework. This applies mainly to Phases 5, 6, and 8, which have the most user-facing surface.
 
 ---
 
@@ -72,6 +73,7 @@
 
 **Goal:** PRD feature 8 — an aggregate view, no longer meeting-by-meeting.
 
+- Before building: a short spec pass on the exact charts/metrics to show (e.g. completion percentage, pending-issue counts, key-points list) — deferred on purpose until real Phase 3-4 data exists to design around (see the UI/UX principle above).
 - Query aggregated by `recurrence_group_id`: open vs. resolved risks over time.
 
 **Definition of done:** the dashboard correctly reflects the state of a workspace with multiple meetings and at least one resolved recurring risk.
