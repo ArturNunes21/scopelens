@@ -2,6 +2,12 @@
 
 Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they close; reference the item number in the commit/PR message (e.g. "closes Phase 0 #4-#6").
 
+## Phase 0.5 — Spec review gap remediation ([GAPS.md](./GAPS.md))
+
+- [x] G1-G14, G17-G20: doc-level fixes applied to ARCHITECTURE.md/PRD.md/ROADMAP.md/CONTEXT.md
+- [ ] G15: verify real Vercel `maxDuration` once the account exists (blocks nothing now, revisit before Phase 5)
+- [ ] G16: set up external anti-pause pinger once Supabase account exists (see SETUP.md)
+
 ## Phase 0 — Foundation and instrumentation
 
 - [x] 1. Next.js scaffold (TypeScript, Tailwind, App Router)

@@ -2,7 +2,7 @@
 
 **Product/Technical Requirements Document**
 **Author:** Artur Nunes Oliveira Resende
-**Status:** Planning closed — product scope, AI method, and tech stack decided; execution in progress (see ROADMAP.md)
+**Status:** Planning closed — product scope, AI method, and tech stack decided; execution in progress (see ROADMAP.md). Gaps found in a pre-implementation spec review are tracked in [GAPS.md](./GAPS.md).
 **Last updated:** see this file's commit history
 
 ---
@@ -87,7 +87,7 @@ ScopeLens does not compete as an engineering BI dashboard (it would lose against
 | 5 | Actionable suggestions | List of next steps or questions recommended by the AI |
 | 6 | Per-workspace history | Analyzed meetings are saved and tied to the project/team |
 | 7 | Recurrence tracking | Cross-referencing meetings over time, flagging recurring risks/blockers |
-| 8 | Trend dashboard | View of open vs. resolved risks across sprints |
+| 8 | Trend dashboard | View of open vs. resolved risks over time (see ARCHITECTURE.md section 2.3 — no `sprints` entity in the MVP) |
 | 9 | Authentication and multi-tenancy | Each team/company has an isolated workspace |
 
 ### 8.2 Product vision — post-MVP (not committed)
@@ -186,3 +186,4 @@ No open planning decisions at this time. Next step is execution per ROADMAP.md, 
 | AI analysis method | Custom variation with domain-specific lenses (extraction → multi-perspective diagnosis → synthesis), not the native "5 voices" skill nor a persona-free pipeline — see section 8.3 |
 | Tech stack | Vercel + Supabase + Claude API + Stripe (test mode) + Sentry + PostHog, all on free tier/test mode with migration-free upgrade path — see section 10 |
 | Value proposition reframed | Core differentiator repositioned from "meeting-to-business-language translation" to "diagnostic analysis of unstructured project sources" (translation is a presentation feature on top of it); multi-format source ingestion (PDF/Markdown/docs) added to the post-MVP vision as the natural extension — see section 6 and 8.2 |
+| Pre-implementation spec review | 20 gaps found across schema, auth, AI pipeline contracts, and ops before starting Phase 1 — resolved at the doc level (schema fixes, RLS pattern, AI contracts, cost ceiling, retention policy) in ARCHITECTURE.md; full register and remediation plan in GAPS.md. Two items (`maxDuration` limit, GitHub Actions cron reliability) remain open pending Vercel/Supabase account creation |
