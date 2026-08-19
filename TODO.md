@@ -28,6 +28,7 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 2 — Meeting ingestion (no AI)
 
+- [ ] Design pass: install `frontend-design` skill, run it on the first real screen, capture the resulting tokens (palette, typography, spacing, signature element) in a new `DESIGN.md` — do this before/alongside the screens below so they share one system instead of improvising per screen
 - [ ] Paste-text / upload `.txt`/`.vtt` UI
 - [ ] `meetings` table, listing/history per workspace
 
