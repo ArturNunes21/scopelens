@@ -23,7 +23,11 @@ The first four items unblock Phase 0. The last two only matter for Phases 3 and 
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (never expose on the client)
-5. **Pending (GAPS.md G16):** once this project exists, set up an anti-pause pinger. Don't rely solely on a GitHub Actions cron — GitHub auto-disables scheduled workflows after 60 days of repo inactivity, which would silently let the free-tier project pause anyway. Use an external pinger (e.g. cron-job.org, UptimeRobot) hitting a lightweight health-check route instead.
+5. **Anti-pause pinger (GAPS.md G16):** don't rely solely on a GitHub Actions cron — GitHub auto-disables scheduled workflows after 60 days of repo inactivity, which would silently let the free-tier project pause anyway. Instead:
+   1. Go to [cron-job.org](https://cron-job.org) (or [UptimeRobot](https://uptimerobot.com)) → create a free account.
+   2. Create a new monitor/cron job hitting `GET https://<your-vercel-domain>/api/health` (e.g. `https://scopelens-five.vercel.app/api/health`).
+   3. Set the interval to a few hours (Supabase free-tier pauses after 7 days of no activity, so even a once-a-day hit is enough — more frequent just gives faster failure detection).
+   4. The route runs a trivial query against Supabase and returns `{ status: "ok", db: true }` — confirm you get a 200 after setting it up.
 
 ### 3. Sentry (errors)
 
