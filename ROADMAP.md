@@ -1,6 +1,6 @@
 # Implementation Roadmap — ScopeLens
 
-**Depends on:** PRD.md, ARCHITECTURE.md
+**Depends on:** PRD.md, ARCHITECTURE.md, GAPS.md (pre-implementation gap register and remediation plan)
 **Principles guiding the phase order:**
 - Instrument (errors + analytics) before writing product logic, not after — cheaper to do early than retroactively.
 - Vertical slice per phase: each phase delivers something that runs end to end and is deployable, not an isolated layer (e.g. not "whole schema first, whole UI later").
@@ -74,7 +74,7 @@
 **Goal:** PRD feature 8 — an aggregate view, no longer meeting-by-meeting.
 
 - Before building: a short spec pass on the exact charts/metrics to show (e.g. completion percentage, pending-issue counts, key-points list) — deferred on purpose until real Phase 3-4 data exists to design around (see the UI/UX principle above).
-- Query aggregated by `recurrence_group_id`: open vs. resolved risks over time.
+- Query aggregated by `recurrence_group_id`: open vs. resolved risks over time, grouped by `meetings.occurred_at` (no `sprints` entity — see ARCHITECTURE.md 2.3 / GAPS.md G7).
 
 **Definition of done:** the dashboard correctly reflects the state of a workspace with multiple meetings and at least one resolved recurring risk.
 

@@ -23,6 +23,7 @@ The first four items unblock Phase 0. The last two only matter for Phases 3 and 
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (never expose on the client)
+5. **Pending (GAPS.md G16):** once this project exists, set up an anti-pause pinger. Don't rely solely on a GitHub Actions cron — GitHub auto-disables scheduled workflows after 60 days of repo inactivity, which would silently let the free-tier project pause anyway. Use an external pinger (e.g. cron-job.org, UptimeRobot) hitting a lightweight health-check route instead.
 
 ### 3. Sentry (errors)
 
