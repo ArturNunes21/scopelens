@@ -17,6 +17,16 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(new URL(next, request.url));
     }
+
+    // Logged server-side only (Vercel function logs) — never shown to the
+    // user, but needed to tell "link already used/expired" apart from a
+    // config bug while diagnosing the magic-link flow.
+    console.error("Magic-link verifyOtp failed:", error.code, error.message);
+  } else {
+    console.error("Magic-link callback missing token_hash/type", {
+      hasTokenHash: Boolean(token_hash),
+      type,
+    });
   }
 
   return NextResponse.redirect(new URL("/login?error=invalid_link", request.url));
