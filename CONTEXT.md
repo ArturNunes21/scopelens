@@ -48,7 +48,7 @@ AI isn't just a text summarizer. Its core functions are:
 5. **Actionable suggestions** — list of next steps or questions recommended by the AI.
 6. **Per-workspace history** — every analyzed meeting is saved and tied to the project/team.
 7. **Recurrence tracking** — the AI cross-references meetings over time and flags risks/blockers that reappear (e.g. "this blocker has already been mentioned 3 times").
-8. **Simple trend dashboard** — view of open vs. resolved risks across sprints.
+8. **Simple trend dashboard** — view of open vs. resolved risks over time (no `sprints` entity in the MVP — see ARCHITECTURE.md 2.3).
 9. **Authentication and multi-tenancy** — each team/company has its own isolated workspace.
 
 ### 3.5 Product vision — post-MVP (not committed yet)
