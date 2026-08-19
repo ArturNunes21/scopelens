@@ -14,17 +14,17 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 - [x] 2. GitHub Actions CI (lint + typecheck + build)
 - [x] 3. Sentry + PostHog instrumentation in code (env-gated, inert without a key)
 - [x] 4. Local Supabase CLI config + versioned migrations folder
-- [ ] 5. Create accounts: Vercel, Supabase, Sentry, PostHog (see `SETUP.md`)
-- [ ] 6. Initial deploy on Vercel (public URL live)
-- [ ] 7. Validate: a deliberate production error shows up in Sentry
-- [ ] 8. Validate: a pageview event shows up in PostHog
+- [x] 5. Create accounts: Vercel, Supabase, Sentry, PostHog (see `SETUP.md`)
+- [x] 6. Initial deploy on Vercel (public URL live)
+- [x] 7. Validate: a deliberate production error shows up in Sentry
+- [x] 8. Validate: a pageview event shows up in PostHog
 
 ## Phase 1 — Authentication and multi-tenancy
 
-- [ ] Supabase Auth (magic link)
-- [ ] Trigger that auto-creates a workspace + workspace_members on signup
-- [ ] RLS enabled on every domain table
-- [ ] Automated cross-tenant isolation test
+- [ ] Supabase Auth (magic link) — code done (`/login`, `/auth/confirm`); pending your manual end-to-end click-through
+- [x] Trigger that auto-creates a workspace + workspace_members on signup
+- [x] RLS enabled on every domain table
+- [x] Automated cross-tenant isolation test
 
 ## Phase 2 — Meeting ingestion (no AI)
 
