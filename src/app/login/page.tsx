@@ -1,7 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { requestMagicLink } from "./actions";
+
+const LINK_ERROR_MESSAGES: Record<string, string> = {
+  invalid_link:
+    "This sign-in link is invalid or has already been used — request a new one below.",
+};
+
+function LinkError() {
+  const searchParams = useSearchParams();
+  const code = searchParams.get("error");
+  if (!code) return null;
+
+  return (
+    <p className="mb-4 text-sm text-red-600 dark:text-red-400">
+      {LINK_ERROR_MESSAGES[code] ?? "Something went wrong with that link — try again."}
+    </p>
+  );
+}
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(requestMagicLink, {
@@ -18,6 +36,12 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           We&apos;ll email you a magic link — no password needed.
         </p>
+
+        <Suspense fallback={null}>
+          <div className="mt-4">
+            <LinkError />
+          </div>
+        </Suspense>
 
         {state.sent ? (
           <p className="mt-6 text-sm text-zinc-700 dark:text-zinc-300">
