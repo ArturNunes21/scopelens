@@ -21,7 +21,7 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 1 — Authentication and multi-tenancy
 
-- [ ] Supabase Auth (magic link) — code done (`/login`, `/auth/confirm`); pending your manual end-to-end click-through
+- [x] Supabase Auth (magic link) — verified end-to-end in production (2026-08-24)
 - [x] Trigger that auto-creates a workspace + workspace_members on signup
 - [x] RLS enabled on every domain table
 - [x] Automated cross-tenant isolation test
