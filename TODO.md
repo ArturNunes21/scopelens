@@ -28,9 +28,9 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 2 — Meeting ingestion (no AI)
 
-- [ ] Design pass: install `frontend-design` skill, run it on the first real screen, capture the resulting tokens (palette, typography, spacing, signature element) in a new `DESIGN.md` — do this before/alongside the screens below so they share one system instead of improvising per screen
-- [ ] Paste-text / upload `.txt`/`.vtt` UI
-- [ ] `meetings` table, listing/history per workspace
+- [x] Design pass: tokens (palette, typography, spacing, signature element) captured in [`DESIGN.md`](./DESIGN.md) from the `/meetings` screens, reviewed with the `web-design-guidelines` skill (installed skill is a compliance reviewer, not a token generator — `frontend-design` as originally named doesn't exist as such)
+- [x] Paste-text / upload `.txt`/`.vtt` UI (`/meetings/new`)
+- [x] `meetings` table (already in the Phase 1 schema), listing/history per workspace (`/meetings`)
 
 ## Phase 3 — Structured extraction (AI pipeline stage 1)
 
