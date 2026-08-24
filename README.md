@@ -27,8 +27,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Other scripts: `npm run lint`, `npm run typecheck`, `npm run build`.
+Other scripts: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test` (integration tests — runs against the linked remote Supabase project, see `tests/rls-isolation.test.ts`).
 
 ## Status
 
-In development — scope and architecture closed (see documentation above), Phase 0 of the roadmap in progress. No product features implemented yet.
+In development — Phases 0 and 1 of the roadmap complete (foundation, instrumentation, auth, multi-tenancy with RLS verified end-to-end). Phase 2 (meeting ingestion) next. No product features implemented yet.

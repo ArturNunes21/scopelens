@@ -6,7 +6,7 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 - [x] G1-G14, G17-G20: doc-level fixes applied to ARCHITECTURE.md/PRD.md/ROADMAP.md/CONTEXT.md
 - [ ] G15: verify real Vercel `maxDuration` once the account exists (blocks nothing now, revisit before Phase 5)
-- [ ] G16: set up external anti-pause pinger once Supabase account exists (see SETUP.md)
+- [x] G16: external anti-pause pinger configured (cron-job.org → `/api/health`)
 
 ## Phase 0 — Foundation and instrumentation
 
