@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireWorkspace } from "@/lib/workspace";
 import { extractTranscript } from "./transcript";
+import { runExtractionPipeline } from "@/lib/ai/pipeline";
 
 const MEETING_TYPES = ["daily", "planning", "retro", "kickoff"] as const;
 
@@ -70,6 +71,11 @@ export async function createMeeting(
   if (error || !meeting) {
     return { error: error?.message ?? "Could not save the meeting." };
   }
+
+  // No queue for the MVP — processing runs in the same request that received
+  // the upload (ARCHITECTURE.md section 3). Errors are recorded on the
+  // meeting itself (status='failed'), never thrown back to the form.
+  await runExtractionPipeline(meeting.id, workspaceId);
 
   redirect(`/meetings`);
 }
