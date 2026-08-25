@@ -28,9 +28,10 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 2 — Meeting ingestion (no AI)
 
-- [ ] Design pass: install `frontend-design` skill, run it on the first real screen, capture the resulting tokens (palette, typography, spacing, signature element) in a new `DESIGN.md` — do this before/alongside the screens below so they share one system instead of improvising per screen
-- [ ] Paste-text / upload `.txt`/`.vtt` UI
-- [ ] `meetings` table, listing/history per workspace
+- [x] Design pass: tokens (palette, typography, spacing, signature element) captured in [`DESIGN.md`](./DESIGN.md) from the `/meetings` screens, reviewed with the `web-design-guidelines` skill (installed skill is a compliance reviewer, not a token generator — `frontend-design` as originally named doesn't exist as such)
+- [x] Paste-text / upload `.txt`/`.vtt` UI (`/meetings/new`)
+- [x] `meetings` table (already in the Phase 1 schema), listing/history per workspace (`/meetings`)
+- [x] Verified end-to-end locally (2026-08-24): paste + `.txt` + `.vtt` upload (VTT cue/timestamp stripping confirmed in `transcript_raw`), 50k-char cap rejected client- and server-side, empty-state, cross-workspace isolation (second workspace sees zero meetings from the first), unauthenticated `/meetings` redirects to `/login`, `npm run test` (RLS) green
 
 ## Phase 3 — Structured extraction (AI pipeline stage 1)
 
@@ -64,6 +65,7 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 - [ ] Empty/error states, seeded demo data
 - [ ] README telling the project's story
 - [ ] Custom domain (optional)
+- [ ] Known issue found during Phase 2 manual testing (2026-08-24): Supabase's default email provider routes magic links through Amazon SES click-tracking (`awstrack.me`); an email security scanner can pre-fetch the link and consume the single-use OTP token before the human clicks, producing an intermittent `invalid_link` on first attempt (a retry always works). A first-contact recruiter hitting this with no guidance is a real risk — before shipping, either configure custom SMTP without click-tracking or add explicit "try again" messaging to the `invalid_link` state
 
 ---
 
