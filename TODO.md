@@ -35,9 +35,10 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 3 — Structured extraction (AI pipeline stage 1)
 
-- [ ] Claude API integration (structured output)
-- [ ] `findings` population
-- [ ] `ai_calls` logging (cost/latency)
+- [x] Claude API integration (structured output)
+- [x] `findings` population
+- [x] `ai_calls` logging (cost/latency)
+- Verified end-to-end locally (2026-08-25): first attempt failed on a `0`-credit Anthropic API key (`error_message`: "Your credit balance is too low"), confirming zero partial rows are left in `findings`/`ai_calls` on failure (GAPS.md G13 rollback). After adding API credits, a re-run transcript with one example of each type produced exactly 1 blocker, 1 risk, 1 dependency, 2 decisions (1 taken, 1 pending) with correct owners (null left null, never invented), and 1 `ai_calls` row (`stage=extraction`, `model=claude-haiku-4-5`, tokens_in=950, tokens_out=143, cost_usd=0.001665, latency_ms=8380) — matches the Phase 3 Definition of Done in ROADMAP.md.
 
 ## Phase 4 — Cross-meeting recurrence
 
