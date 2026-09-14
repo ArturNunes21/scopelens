@@ -42,9 +42,9 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 4 — Cross-meeting recurrence
 
-- [ ] `pg_trgm` matching
-- [ ] `recurrence_group_id` assignment
-- [ ] Test with synthetic meetings (no false positives)
+- [x] `pg_trgm` matching (`match_recurrence_finding` SQL function, service-invoker, workspace/type/status-scoped)
+- [x] `recurrence_group_id` assignment (wired into `pipeline.ts`, sequential match-before-insert per meeting)
+- [x] Test with synthetic meetings (no false positives) — verified 2026-09-14: threshold calibrated to 0.25 against real fixtures (reworded true-positive scored 0.32 similarity; closest distinct-blocker false-positive candidate scored 0.092, comfortable margin below); 10/10 tests green (`tests/recurrence-matching.test.ts`), migration `20260826000000_recurrence_matching_function.sql` applied to remote Supabase
 
 ## Phase 5 — Multi-perspective diagnosis and synthesis (stages 2-3)
 
