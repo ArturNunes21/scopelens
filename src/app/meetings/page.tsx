@@ -1,21 +1,7 @@
 import Link from "next/link";
 import { requireWorkspace } from "@/lib/workspace";
 import { signOut } from "@/app/login/logout-action";
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Pending",
-  processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
-};
-
-const STATUS_CLASS: Record<string, string> = {
-  pending: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  processing: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  completed:
-    "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  failed: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
-};
+import { STATUS_LABEL, STATUS_CLASS } from "./status";
 
 export default async function MeetingsPage() {
   const { supabase, workspaceId } = await requireWorkspace();
@@ -75,26 +61,28 @@ export default async function MeetingsPage() {
           {!error && meetings && meetings.length > 0 && (
             <ul className="flex flex-col gap-2">
               {meetings.map((meeting) => (
-                <li
-                  key={meeting.id}
-                  className="flex items-center justify-between rounded-lg border border-black/[.08] bg-white px-4 py-3 dark:border-white/[.145] dark:bg-zinc-950"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-black dark:text-zinc-50">
-                      {meeting.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                      {meeting.meeting_type} ·{" "}
-                      {new Date(meeting.occurred_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      STATUS_CLASS[meeting.status] ?? STATUS_CLASS.pending
-                    }`}
+                <li key={meeting.id}>
+                  <Link
+                    href={`/meetings/${meeting.id}`}
+                    className="flex items-center justify-between rounded-lg border border-black/[.08] bg-white px-4 py-3 transition-colors hover:border-black/[.16] dark:border-white/[.145] dark:bg-zinc-950 dark:hover:border-white/[.29]"
                   >
-                    {STATUS_LABEL[meeting.status] ?? meeting.status}
-                  </span>
+                    <div>
+                      <p className="text-sm font-medium text-black dark:text-zinc-50">
+                        {meeting.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        {meeting.meeting_type} ·{" "}
+                        {new Date(meeting.occurred_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        STATUS_CLASS[meeting.status] ?? STATUS_CLASS.pending
+                      }`}
+                    >
+                      {STATUS_LABEL[meeting.status] ?? meeting.status}
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>

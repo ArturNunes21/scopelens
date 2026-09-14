@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireWorkspace } from "@/lib/workspace";
 import { extractTranscript } from "./transcript";
 import { runExtractionPipeline } from "@/lib/ai/pipeline";
@@ -78,4 +79,29 @@ export async function createMeeting(
   await runExtractionPipeline(meeting.id, workspaceId);
 
   redirect(`/meetings`);
+}
+
+// User-triggered retry (ARCHITECTURE.md section 3, resolves GAPS.md G13): the
+// pipeline itself is idempotent — re-running it clears any prior
+// findings/diagnostic_notes/suggested_actions for this meeting and starts
+// fresh from Stage 1. Workspace membership is re-verified here rather than
+// trusting the meetingId from the form.
+export async function retryMeeting(meetingId: string): Promise<void> {
+  const { supabase, workspaceId } = await requireWorkspace();
+
+  // Verify via the user-scoped (RLS-respecting) client that this meeting
+  // actually belongs to the caller's workspace before running the
+  // service-role pipeline on it — the pipeline itself trusts workspaceId as
+  // given, so this check is what stands between a caller and a cross-tenant
+  // write (ARCHITECTURE.md section 2 auth pattern).
+  const { data: meeting, error } = await supabase
+    .from("meetings")
+    .select("id")
+    .eq("id", meetingId)
+    .eq("workspace_id", workspaceId)
+    .single();
+  if (error || !meeting) return;
+
+  await runExtractionPipeline(meetingId, workspaceId);
+  revalidatePath(`/meetings/${meetingId}`);
 }

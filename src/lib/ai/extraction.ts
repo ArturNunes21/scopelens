@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import Anthropic from "@anthropic-ai/sdk";
 import { anthropic } from "./client";
+import { withRetries } from "./retry";
 
 // Stage 1 — Extraction (ARCHITECTURE.md section 4). Cheapest/fastest tier —
 // this is a structured-extraction task, not open-ended reasoning.
@@ -51,30 +51,6 @@ Rules:
 - description is a concise, self-contained sentence (a reader with no other context should understand it).
 - Skip small talk and status updates that aren't a blocker/risk/dependency/decision.
 - If a category has no findings, return an empty array for it — do not invent findings to fill it.`;
-
-// Up to 2 retries with backoff per individual call (ARCHITECTURE.md section 3,
-// resolves GAPS.md G13) — only for retryable failures, not bad input.
-async function withRetries<T>(fn: () => Promise<T>): Promise<T> {
-  const maxAttempts = 3;
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      const retryable =
-        error instanceof Anthropic.RateLimitError ||
-        error instanceof Anthropic.APIConnectionError ||
-        error instanceof Anthropic.InternalServerError;
-
-      if (!retryable || attempt === maxAttempts) break;
-      await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** (attempt - 1)));
-    }
-  }
-
-  throw lastError;
-}
 
 export async function extractFindings(
   transcript: string,
