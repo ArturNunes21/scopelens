@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { extractFindings } from "./extraction";
+import { findRecurrenceMatch } from "./recurrence";
 
 const DEFAULT_MONTHLY_BUDGET_USD = 5;
 
@@ -76,7 +77,7 @@ export async function runExtractionPipeline(
   try {
     const result = await extractFindings(meeting.transcript_raw, meeting.meeting_type);
 
-    const rows = [
+    const extracted = [
       ...result.data.blockers.map((f) => ({ ...f, finding_type: "blocker" as const })),
       ...result.data.risks.map((f) => ({ ...f, finding_type: "risk" as const })),
       ...result.data.dependencies.map((f) => ({
@@ -84,9 +85,24 @@ export async function runExtractionPipeline(
         finding_type: "dependency" as const,
       })),
       ...result.data.decisions.map((f) => ({ ...f, finding_type: "decision" as const })),
-    ].map((f) => {
+    ];
+
+    const rows = [];
+    for (const f of extracted) {
       const id = randomUUID();
-      return {
+      // Sequential (not Promise.all): matching must only ever see findings
+      // already committed from OTHER meetings (ARCHITECTURE.md section 2.3,
+      // Phase 4) — this meeting's own rows aren't inserted until after this
+      // loop, which is what keeps same-meeting findings from matching each
+      // other. Don't parallelize this loop without re-checking that
+      // guarantee.
+      const match = await findRecurrenceMatch(
+        supabase,
+        workspaceId,
+        f.finding_type,
+        f.description
+      );
+      rows.push({
         id,
         workspace_id: workspaceId,
         meeting_id: meetingId,
@@ -94,11 +110,9 @@ export async function runExtractionPipeline(
         description: f.description,
         owner: f.owner,
         decision_status: "decision_status" in f ? f.decision_status : null,
-        // No recurrence matching yet (Phase 4) — every finding starts as its
-        // own root (ARCHITECTURE.md section 2.3, resolves GAPS.md G5).
-        recurrence_group_id: id,
-      };
-    });
+        recurrence_group_id: match ? match.recurrenceGroupId : id,
+      });
+    }
 
     if (rows.length > 0) {
       const { error: insertError } = await supabase.from("findings").insert(rows);
