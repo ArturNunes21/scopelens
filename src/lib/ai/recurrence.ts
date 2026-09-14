@@ -1,3 +1,4 @@
+import { getEnvNumber } from "@/lib/env";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 // Calibrated against tests/recurrence-matching.test.ts fixtures: a genuine
@@ -10,9 +11,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 const DEFAULT_RECURRENCE_SIMILARITY_THRESHOLD = 0.25;
 
 function getRecurrenceThreshold(): number {
-  const raw = process.env.RECURRENCE_SIMILARITY_THRESHOLD;
-  const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) ? parsed : DEFAULT_RECURRENCE_SIMILARITY_THRESHOLD;
+  return getEnvNumber("RECURRENCE_SIMILARITY_THRESHOLD", DEFAULT_RECURRENCE_SIMILARITY_THRESHOLD);
 }
 
 export type RecurrenceMatch = { recurrenceGroupId: string; similarity: number } | null;

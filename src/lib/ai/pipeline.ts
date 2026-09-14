@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { getEnvNumber } from "@/lib/env";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { extractFindings } from "./extraction";
 import { findRecurrenceMatch } from "./recurrence";
@@ -6,9 +7,7 @@ import { findRecurrenceMatch } from "./recurrence";
 const DEFAULT_MONTHLY_BUDGET_USD = 5;
 
 function getMonthlyBudgetUsd(): number {
-  const raw = process.env.AI_MONTHLY_BUDGET_USD;
-  const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) ? parsed : DEFAULT_MONTHLY_BUDGET_USD;
+  return getEnvNumber("AI_MONTHLY_BUDGET_USD", DEFAULT_MONTHLY_BUDGET_USD);
 }
 
 // Cost ceiling enforcement (ARCHITECTURE.md section 2.5, resolves GAPS.md G12):
@@ -87,32 +86,33 @@ export async function runExtractionPipeline(
       ...result.data.decisions.map((f) => ({ ...f, finding_type: "decision" as const })),
     ];
 
-    const rows = [];
-    for (const f of extracted) {
-      const id = randomUUID();
-      // Sequential (not Promise.all): matching must only ever see findings
-      // already committed from OTHER meetings (ARCHITECTURE.md section 2.3,
-      // Phase 4) — this meeting's own rows aren't inserted until after this
-      // loop, which is what keeps same-meeting findings from matching each
-      // other. Don't parallelize this loop without re-checking that
-      // guarantee.
-      const match = await findRecurrenceMatch(
-        supabase,
-        workspaceId,
-        f.finding_type,
-        f.description
-      );
-      rows.push({
-        id,
-        workspace_id: workspaceId,
-        meeting_id: meetingId,
-        finding_type: f.finding_type,
-        description: f.description,
-        owner: f.owner,
-        decision_status: "decision_status" in f ? f.decision_status : null,
-        recurrence_group_id: match ? match.recurrenceGroupId : id,
-      });
-    }
+    // Matching must only ever see findings already committed from OTHER
+    // meetings (ARCHITECTURE.md section 2.3, Phase 4) — this meeting's own
+    // rows aren't inserted until after Promise.all below resolves, which is
+    // what keeps same-meeting findings from matching each other. Safe to run
+    // in parallel: every match call only reads already-committed rows, and
+    // that read set doesn't change based on ordering among these calls.
+    const rows = await Promise.all(
+      extracted.map(async (f) => {
+        const id = randomUUID();
+        const match = await findRecurrenceMatch(
+          supabase,
+          workspaceId,
+          f.finding_type,
+          f.description
+        );
+        return {
+          id,
+          workspace_id: workspaceId,
+          meeting_id: meetingId,
+          finding_type: f.finding_type,
+          description: f.description,
+          owner: f.owner,
+          decision_status: "decision_status" in f ? f.decision_status : null,
+          recurrence_group_id: match ? match.recurrenceGroupId : id,
+        };
+      })
+    );
 
     if (rows.length > 0) {
       const { error: insertError } = await supabase.from("findings").insert(rows);
