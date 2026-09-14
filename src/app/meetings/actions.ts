@@ -93,12 +93,18 @@ export async function retryMeeting(meetingId: string): Promise<void> {
   // actually belongs to the caller's workspace before running the
   // service-role pipeline on it — the pipeline itself trusts workspaceId as
   // given, so this check is what stands between a caller and a cross-tenant
-  // write (ARCHITECTURE.md section 2 auth pattern).
+  // write (ARCHITECTURE.md section 2 auth pattern). Also require status
+  // 'failed': a stale/duplicate client call (page not yet re-rendered after
+  // a Realtime status push, or a direct call bypassing the UI) must not
+  // start a second concurrent pipeline run on a meeting already pending/
+  // processing/completed — that would interleave two runs' deletes/inserts
+  // across findings/diagnostic_notes/suggested_actions.
   const { data: meeting, error } = await supabase
     .from("meetings")
     .select("id")
     .eq("id", meetingId)
     .eq("workspace_id", workspaceId)
+    .eq("status", "failed")
     .single();
   if (error || !meeting) return;
 

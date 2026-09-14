@@ -34,11 +34,12 @@ export function MeetingStatusBadge({
         (payload) => {
           const newStatus = (payload.new as { status: string }).status;
           setStatus(newStatus);
-          // Re-fetch the server-rendered findings/diagnosis/summary once the
-          // pipeline has something new to show.
-          if (newStatus === "completed" || newStatus === "failed") {
-            router.refresh();
-          }
+          // Re-fetch the server-rendered body on every transition, not just
+          // the terminal ones — e.g. failed -> processing (via Retry) must
+          // also re-render so the stale error message + Retry button (from
+          // the initial server render) disappear immediately, instead of
+          // staying clickable while a run is genuinely in flight.
+          router.refresh();
         }
       )
       .subscribe();

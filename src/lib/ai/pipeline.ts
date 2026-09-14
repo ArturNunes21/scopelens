@@ -39,10 +39,25 @@ async function isOverMonthlyBudget(
   return spent >= getMonthlyBudgetUsd();
 }
 
+// Clears every row this pipeline writes for a meeting, across all 3 stages —
+// used both up front (idempotent retry, resolves GAPS.md G13) and on
+// failure (no partial data left behind). One place to update if a future
+// phase adds another table the pipeline writes to.
+async function clearPipelineRows(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  meetingId: string
+): Promise<void> {
+  await supabase.from("findings").delete().eq("meeting_id", meetingId);
+  await supabase.from("diagnostic_notes").delete().eq("meeting_id", meetingId);
+  await supabase.from("suggested_actions").delete().eq("meeting_id", meetingId);
+}
+
 // Runs Stage 1 (extraction) for a meeting: pending -> processing -> completed/failed.
-// Uses the service-role client — safe here because the caller (createMeeting
-// server action) already verified workspace membership via requireWorkspace()
-// before this meeting was ever inserted (ARCHITECTURE.md section 2 auth pattern).
+// Uses the service-role client, so workspaceId is re-verified against the
+// meeting's actual row below rather than trusted blindly — every current
+// caller (createMeeting, retryMeeting) already checks workspace membership
+// via requireWorkspace() first, but this is the actual trust boundary a
+// future caller funnels through (ARCHITECTURE.md section 2 auth pattern).
 export async function runExtractionPipeline(
   meetingId: string,
   workspaceId: string
@@ -60,18 +75,9 @@ export async function runExtractionPipeline(
     return;
   }
 
-  await supabase.from("meetings").update({ status: "processing" }).eq("id", meetingId);
-
-  // Idempotent retry safety (resolves GAPS.md G13): clear any rows left over
-  // from a previous attempt on this meeting, from every stage, before
-  // writing new ones.
-  await supabase.from("findings").delete().eq("meeting_id", meetingId);
-  await supabase.from("diagnostic_notes").delete().eq("meeting_id", meetingId);
-  await supabase.from("suggested_actions").delete().eq("meeting_id", meetingId);
-
   const { data: meeting, error: fetchError } = await supabase
     .from("meetings")
-    .select("transcript_raw, meeting_type")
+    .select("workspace_id, transcript_raw, meeting_type")
     .eq("id", meetingId)
     .single();
 
@@ -82,6 +88,19 @@ export async function runExtractionPipeline(
       .eq("id", meetingId);
     return;
   }
+  if (meeting.workspace_id !== workspaceId) {
+    // Caller-supplied workspaceId doesn't match this meeting's actual
+    // workspace — refuse rather than writing findings/ai_calls under the
+    // wrong workspace_id. Not exposed as a specific error to avoid leaking
+    // the meeting's existence to a caller who shouldn't see it.
+    return;
+  }
+
+  await supabase.from("meetings").update({ status: "processing" }).eq("id", meetingId);
+
+  // Idempotent retry safety (resolves GAPS.md G13): clear any rows left over
+  // from a previous attempt on this meeting before writing new ones.
+  await clearPipelineRows(supabase, meetingId);
 
   try {
     const result = await extractFindings(meeting.transcript_raw, meeting.meeting_type);
@@ -165,6 +184,16 @@ export async function runExtractionPipeline(
 
     const diagnosis = await diagnoseMeeting(meeting.transcript_raw, currentFindings, priorFindings);
 
+    // related_finding_ids is best-effort and not FK-enforced at the schema
+    // level (ARCHITECTURE.md section 2.4) — the DB column is still a
+    // uuid[], so one hallucinated non-uuid string from the model would fail
+    // the whole insert. Drop anything the model returns that isn't an id we
+    // actually gave it, instead of trusting it verbatim.
+    const knownFindingIds = new Set([
+      ...currentFindings.map((f) => f.id),
+      ...priorFindings.map((f) => f.id),
+    ]);
+
     if (diagnosis.data.notes.length > 0) {
       const { error: notesError } = await supabase.from("diagnostic_notes").insert(
         diagnosis.data.notes.map((note) => ({
@@ -173,7 +202,7 @@ export async function runExtractionPipeline(
           meeting_id: meetingId,
           lens: note.lens,
           content: note.content,
-          related_finding_ids: note.related_finding_ids,
+          related_finding_ids: note.related_finding_ids.filter((id) => knownFindingIds.has(id)),
         }))
       );
       if (notesError) throw new Error(`Could not save diagnostic notes: ${notesError.message}`);
@@ -233,9 +262,7 @@ export async function runExtractionPipeline(
   } catch (error) {
     // No partial data left behind (resolves GAPS.md G13): drop whatever any
     // stage of this failed attempt may have inserted before the error.
-    await supabase.from("findings").delete().eq("meeting_id", meetingId);
-    await supabase.from("diagnostic_notes").delete().eq("meeting_id", meetingId);
-    await supabase.from("suggested_actions").delete().eq("meeting_id", meetingId);
+    await clearPipelineRows(supabase, meetingId);
     await supabase
       .from("meetings")
       .update({

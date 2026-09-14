@@ -44,7 +44,11 @@ export default async function MeetingDetailPage({
 
   if (error || !meeting) notFound();
 
-  const [{ data: findings }, { data: notes }, { data: actions }] = await Promise.all([
+  const [
+    { data: findings, error: findingsError },
+    { data: notes, error: notesError },
+    { data: actions, error: actionsError },
+  ] = await Promise.all([
     supabase
       .from("findings")
       .select("id, finding_type, description, owner, decision_status")
@@ -61,6 +65,7 @@ export default async function MeetingDetailPage({
       .eq("meeting_id", id)
       .order("created_at", { ascending: true }),
   ]);
+  const loadError = findingsError ?? notesError ?? actionsError;
 
   const findingsByType = new Map<string, typeof findings>();
   for (const type of FINDING_TYPE_ORDER) findingsByType.set(type, []);
@@ -113,6 +118,12 @@ export default async function MeetingDetailPage({
 
         {meeting.status === "completed" && (
           <div className="mt-8 flex flex-col gap-6">
+            {loadError && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                Could not load some of this meeting&apos;s data: {loadError.message}
+              </p>
+            )}
+
             {meeting.executive_summary && (
               <section className="rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
                 <h2 className="text-sm font-medium text-black dark:text-zinc-50">
