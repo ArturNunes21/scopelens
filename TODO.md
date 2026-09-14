@@ -48,9 +48,12 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 5 — Multi-perspective diagnosis and synthesis (stages 2-3)
 
-- [ ] Diagnostic lenses → `diagnostic_notes`
-- [ ] Executive synthesis → `executive_summary` + `suggested_actions`
-- [ ] Full async flow (status + Supabase Realtime)
+- [x] Diagnostic lenses → `diagnostic_notes` (`src/lib/ai/diagnosis.ts`, `claude-sonnet-5`, 3 fixed lenses)
+- [x] Executive synthesis → `executive_summary` + `suggested_actions` (`src/lib/ai/synthesis.ts`, `claude-opus-5`)
+- [x] Full async flow (status + Supabase Realtime): pipeline chains all 3 stages with idempotent rollback; `/meetings/[id]` subscribes via Realtime, no polling; migration `20260914010000_enable_meetings_realtime.sql` adds `meetings` to the publication
+- [x] Retry wired to the UI (`retryMeeting` server action + button on the failed state) — mechanism existed since Phase 3 (GAPS.md G13) but was never exposed until now
+- [x] Verified locally (2026-09-14): typecheck/lint/build clean; dev server smoke test (unauthenticated `/meetings` and `/meetings/[id]` redirect to `/login`, no server errors)
+- [ ] **Pending — needs a human with the Supabase CLI session and a browser:** apply the 2 pending migrations (`20260914000000` trgm index, `20260914010000` Realtime publication) via `supabase db push`; log in and paste a real transcript to confirm the 3-stage chain end-to-end (findings → diagnosis → synthesis) and watch the status pill update live without a refresh — this spends real Anthropic API credits, so it wasn't run automatically
 
 ## Phase 6 — Trend dashboard
 
