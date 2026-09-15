@@ -59,8 +59,9 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 ## Phase 6 — Trend dashboard
 
 - [x] Prerequisite: `findings.status` had no writer anywhere in the codebase before this — resolved two ways (2026-09-15): (1) manual toggle (`toggleFindingStatus` server action + button on `/meetings/[id]`), (2) explicit resolution detection — Stage 1 extraction now also returns `resolved_mentions`, matched against open findings via new `match_finding_to_resolve` SQL function (migration `20260915000000`), wired into `pipeline.ts` after findings insert. Covered by 4 new tests in `tests/recurrence-matching.test.ts` (10/10 → 14/14), including a real end-to-end pipeline run. Never inferred from an issue simply not recurring.
-- [ ] Spec pass on exact charts/metrics (deferred per ROADMAP.md principle — do this now that Phase 3-5 data + resolution tracking exist)
-- [ ] Query aggregated by `recurrence_group_id`
+- [x] Spec pass on exact charts/metrics (2026-09-15): kept lean per PRD section 3 positioning ("point-in-time decision copilot," not a BI dashboard) — 4 stat tiles (open blockers/risks/dependencies, pending decisions), one 2-series line chart (open vs. resolved, cumulative, weekly buckets by `meetings.occurred_at`/`resolved_at`), and a recurring-issues list. No date-range filter in the MVP (small dataset, revisit if usage grows).
+- [x] `/dashboard` route: stat tiles + trend chart (hand-rolled SVG, hover crosshair/tooltip, no new dependency) + recurring-issues list aggregated by `recurrence_group_id` — pure aggregation logic in `src/lib/dashboard.ts`, 7 unit tests in `tests/dashboard.test.ts` (no DB needed, unlike the other 2 test files)
+- [ ] Verified end-to-end in a real logged-in browser session — no browser automation tool was available in this environment; verified instead via (1) build/typecheck/lint/unit-tests all green, (2) unauthenticated `/dashboard` redirects to `/login` (curl), (3) the aggregation logic run directly against the real production Supabase data from Phase 3-5 testing produced sane output (2 open blockers, 2 open risks, 2 open dependencies, 3 pending decisions, 1 recurring group correctly flagged open, a 2-point trend that exercises the actual chart render path, not just the empty-state). Someone should still click through it once in a browser before calling this done.
 
 ## Phase 7 — Billing
 
