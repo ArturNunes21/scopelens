@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // Refreshes the Supabase session cookie on every request, per @supabase/ssr's
 // documented Next.js pattern — required for server components/routes to see
 // a valid session (ARCHITECTURE.md section 2 auth pattern).
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

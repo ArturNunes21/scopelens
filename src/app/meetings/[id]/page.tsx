@@ -4,6 +4,10 @@ import { requireWorkspace } from "@/lib/workspace";
 import { MeetingStatusBadge } from "./status-badge";
 import { RetryButton } from "./retry-button";
 
+// Extends the Server Action timeout for `retryMeeting`'s 3 chained AI calls
+// (GAPS.md G15). See ARCHITECTURE.md section 3.
+export const maxDuration = 60;
+
 const FINDING_TYPE_LABEL: Record<string, string> = {
   blocker: "Blockers",
   risk: "Risks",
