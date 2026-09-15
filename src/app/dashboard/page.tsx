@@ -9,6 +9,18 @@ const FINDING_TYPE_LABEL: Record<string, string> = {
   dependency: "Open dependencies",
 };
 
+// PostgREST silently truncates any unlimited query at its configured
+// max_rows (1000 in supabase/config.toml) — without an explicit limit here,
+// a workspace that ever crosses that count would get wrong cumulative
+// aggregates with no error surfaced. Ordering DESC + limiting, then
+// reversing back to ascending below, keeps the MOST RECENT findings when a
+// cap is hit rather than the oldest — the more useful half to keep correct
+// for a dashboard, at the cost of undercounting older history. Placeholder
+// ceiling for the MVP, same spirit as the 50k-char transcript cap (GAPS.md
+// G17) — a real fix once a workspace nears this is a server-side aggregate
+// query instead of fetching every row to reduce client-side.
+const FINDINGS_QUERY_CAP = 1000;
+
 export default async function DashboardPage() {
   const { supabase, workspaceId } = await requireWorkspace();
 
@@ -18,9 +30,11 @@ export default async function DashboardPage() {
       "id, finding_type, description, status, decision_status, resolved_at, recurrence_group_id, meeting:meetings(occurred_at)"
     )
     .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(FINDINGS_QUERY_CAP);
 
-  const findings = (data ?? []) as unknown as FindingRow[];
+  const findings = ((data ?? []) as unknown as FindingRow[]).reverse();
+  const truncated = findings.length === FINDINGS_QUERY_CAP;
 
   const { openCounts, pendingDecisions } = buildOpenCounts(findings);
   const trend = buildTrend(findings);
@@ -68,6 +82,12 @@ export default async function DashboardPage() {
 
         {!error && findings.length > 0 && (
           <div className="mt-8 flex flex-col gap-6">
+            {truncated && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Showing the most recent {FINDINGS_QUERY_CAP.toLocaleString()} findings — older
+                history is omitted from these totals.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {(["blocker", "risk", "dependency"] as const).map((type) => (
                 <div

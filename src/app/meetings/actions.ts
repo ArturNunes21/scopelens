@@ -141,4 +141,9 @@ export async function toggleFindingStatus(
   if (error || !finding) return;
 
   revalidatePath(`/meetings/${finding.meeting_id}`);
+  // The Phase 6 dashboard's stat tiles/trend/recurring-issues list all read
+  // from this same status column — without this, a soft-navigation back to
+  // /dashboard after a manual resolve/reopen can render from a stale
+  // router-cache entry.
+  revalidatePath("/dashboard");
 }
