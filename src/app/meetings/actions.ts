@@ -116,6 +116,11 @@ export async function retryMeeting(meetingId: string): Promise<void> {
 // no writer anywhere until now, so the trend dashboard's "open vs. resolved"
 // view had no resolved data to show. Workspace membership is re-verified via
 // the user-scoped client, same pattern as retryMeeting above.
+//
+// Excludes finding_type='decision': a decision's lifecycle is
+// decision_status (taken/pending), not status — see ARCHITECTURE.md 2.3
+// "Resolution." The UI already hides this toggle for decisions; this is the
+// actual trust boundary in case that's ever bypassed.
 export async function toggleFindingStatus(
   findingId: string,
   nextStatus: "open" | "resolved"
@@ -130,6 +135,7 @@ export async function toggleFindingStatus(
     })
     .eq("id", findingId)
     .eq("workspace_id", workspaceId)
+    .neq("finding_type", "decision")
     .select("id, meeting_id")
     .single();
   if (error || !finding) return;

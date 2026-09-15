@@ -220,10 +220,12 @@ export default async function MeetingDetailPage({
                                 </span>
                               )}
                             </span>
-                            <FindingResolveToggle
-                              findingId={finding.id}
-                              status={finding.status as "open" | "resolved"}
-                            />
+                            {type !== "decision" && (
+                              <FindingResolveToggle
+                                findingId={finding.id}
+                                status={finding.status as "open" | "resolved"}
+                              />
+                            )}
                           </li>
                         ))}
                       </ul>
