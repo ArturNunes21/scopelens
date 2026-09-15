@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getEnvNumber } from "@/lib/env";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { extractFindings } from "./extraction";
-import { findRecurrenceMatch } from "./recurrence";
+import { findRecurrenceMatch, findFindingToResolve } from "./recurrence";
 import { diagnoseMeeting, type FindingForDiagnosis } from "./diagnosis";
 import { synthesizeMeeting } from "./synthesis";
 
@@ -63,6 +63,14 @@ export async function runExtractionPipeline(
   workspaceId: string
 ): Promise<void> {
   const supabase = createServiceRoleClient();
+
+  // Populated by the resolved_mentions step below — findings belonging to
+  // OTHER meetings that get flipped to 'resolved' as a side effect of this
+  // run. Tracked here (outside the try block) so the catch block can revert
+  // them on failure: clearPipelineRows only deletes THIS meeting's own rows,
+  // but a cross-meeting write must not survive a failed/retried run either
+  // (GAPS.md G13 "no partial data left behind" applies here too).
+  const resolvedFindingIds: string[] = [];
 
   if (await isOverMonthlyBudget(supabase, workspaceId)) {
     await supabase
@@ -148,6 +156,14 @@ export async function runExtractionPipeline(
       if (insertError) throw new Error(`Could not save findings: ${insertError.message}`);
     }
 
+    // Logged immediately after the findings that cost this Haiku call
+    // produced, and deliberately BEFORE the resolved_mentions step below: the
+    // Anthropic API charge already happened the moment extractFindings()
+    // returned above, so it must be recorded regardless of whether a LATER
+    // step in this run fails. isOverMonthlyBudget (GAPS.md G12) sums
+    // ai_calls.cost_usd — logging this any later would let a resolved_mentions
+    // failure (or any downstream failure) hide real, already-incurred spend
+    // from the budget check on a retry.
     const { error: aiCallError } = await supabase.from("ai_calls").insert({
       workspace_id: workspaceId,
       meeting_id: meetingId,
@@ -159,6 +175,59 @@ export async function runExtractionPipeline(
       latency_ms: result.latencyMs,
     });
     if (aiCallError) throw new Error(`Could not log AI call: ${aiCallError.message}`);
+
+    // Explicit resolution detection (Phase 6 prerequisite): matching is
+    // read-only and independent per mention, same reasoning as the
+    // recurrence-match Promise.all above. Resolves every OPEN finding in the
+    // matched recurrence_group_id, not just one row — a recurring issue can
+    // have multiple open occurrences (see recurrence.ts). The bulk update
+    // excludes THIS meeting's own findings explicitly (not just the RPC
+    // match source): the group it resolves into could also contain a row
+    // this same run just inserted via recurrence matching above, and that
+    // row must survive as this meeting's own current statement, not be
+    // silently closed by an unrelated mention landing in the same group.
+    //
+    // Uses allSettled, not all: unlike the read-only findRecurrenceMatch
+    // Promise.all above (whose one write is a single insert AFTER the whole
+    // parallel step resolves), each mention here does its OWN independent
+    // write. Promise.all's fail-fast semantics abandon the aggregate await
+    // the instant the FIRST mention rejects, while the OTHER mentions' writes
+    // keep running unobserved in the background — one could complete (and
+    // resolve another meeting's finding) strictly AFTER the catch block below
+    // has already read resolvedFindingIds and reverted, permanently leaking
+    // an untracked cross-meeting write. allSettled always waits for every
+    // mention to finish one way or another before this line returns, so
+    // resolvedFindingIds is guaranteed complete before any error is thrown.
+    const settlements = await Promise.allSettled(
+      result.data.resolved_mentions.map(async (mention) => {
+        const match = await findFindingToResolve(
+          supabase,
+          workspaceId,
+          mention.finding_type,
+          mention.description,
+          meetingId
+        );
+        if (!match) return [];
+
+        const { data: updated, error: resolveError } = await supabase
+          .from("findings")
+          .update({ status: "resolved", resolved_at: new Date().toISOString() })
+          .eq("recurrence_group_id", match.recurrenceGroupId)
+          .eq("status", "open")
+          .neq("meeting_id", meetingId)
+          .select("id");
+        if (resolveError) {
+          throw new Error(`Could not resolve mentioned finding: ${resolveError.message}`);
+        }
+        return (updated ?? []).map((r) => r.id as string);
+      })
+    );
+    for (const settlement of settlements) {
+      if (settlement.status === "fulfilled") resolvedFindingIds.push(...settlement.value);
+    }
+    for (const settlement of settlements) {
+      if (settlement.status === "rejected") throw settlement.reason;
+    }
 
     const currentFindings: FindingForDiagnosis[] = rows.map((r) => ({
       id: r.id,
@@ -263,6 +332,25 @@ export async function runExtractionPipeline(
     // No partial data left behind (resolves GAPS.md G13): drop whatever any
     // stage of this failed attempt may have inserted before the error.
     await clearPipelineRows(supabase, meetingId);
+    // Also revert any OTHER meeting's findings this run resolved via
+    // resolved_mentions — clearPipelineRows only touches this meeting's own
+    // rows, but a cross-meeting side effect must not survive a failed run.
+    //
+    // Known, accepted gap (same shape as findRecurrenceMatch's documented
+    // concurrency gap above): this revert is unconditional, with no
+    // version/timestamp check. If a user manually re-toggles one of these
+    // exact findings via toggleFindingStatus while THIS run is still in
+    // flight (diagnosis/synthesis takes several seconds), and this run then
+    // fails, the revert overwrites that concurrent manual action. No
+    // optimistic-locking infra exists anywhere else in this codebase either;
+    // not worth introducing for a MVP-scale race this narrow (same finding,
+    // same few-second window, one specific run failing after resolving it).
+    if (resolvedFindingIds.length > 0) {
+      await supabase
+        .from("findings")
+        .update({ status: "open", resolved_at: null })
+        .in("id", resolvedFindingIds);
+    }
     await supabase
       .from("meetings")
       .update({

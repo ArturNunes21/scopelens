@@ -114,6 +114,14 @@ findings
 
 **Reopened findings:** if a finding was `resolved` and the same issue resurfaces in a later meeting, matching only scans `open` findings by design, so the new occurrence starts a **new** `recurrence_group_id` rather than reopening the old chain — a resolved risk resurfacing is itself a signal worth surfacing distinctly, not silently merged into history. Revisit if this produces noisy duplicate chains in practice.
 
+**Resolution (Phase 6 prerequisite):** `status` only ever transitions to `resolved` two ways — never inferred from an issue simply not recurring:
+1. **Manual** — a user toggles a finding on `/meetings/[id]` (`toggleFindingStatus` server action). Restricted to `finding_type != 'decision'` at the query level, not just hidden in the UI — see point below.
+2. **Explicit mention** — Stage 1 extraction also returns `resolved_mentions` (finding_type + description of the *original* issue) whenever a transcript explicitly states an earlier blocker/risk/dependency is resolved. The pipeline matches each mention against the workspace's open findings of that type via `match_finding_to_resolve`, which returns the matched `recurrence_group_id` (same `pg_trgm` mechanism as recurrence matching, but its own, stricter, independently-tunable threshold — 0.3 vs. recurrence's recall-favoring 0.25 — since a resolution false positive silently closes a real, different, still-open issue, a worse failure mode than a recurrence false positive merging two distinct issues into one visible group; also excludes the mentioning meeting's own just-inserted rows both at the match step AND the bulk-update step, since this runs *after* they're committed rather than before like recurrence matching) — the pipeline then bulk-resolves **every OPEN finding in that group**, not just the single closest-worded row: a recurring issue (Phase 4) can have multiple open occurrences across meetings, and an explicit resolution should close the whole chain.
+
+If the pipeline run fails at a later stage, any cross-meeting resolution this step performed is reverted in the catch block (in addition to `clearPipelineRows`, which only covers this meeting's own rows) — GAPS.md G13's "no partial data left behind" applies to this side effect too.
+
+Decisions are excluded from resolved_mentions (the extraction schema doesn't offer `decision` as a `resolved_mentions.finding_type` option) and from the manual toggle (enforced server-side, not just hidden in the UI) — their lifecycle is `decision_status` (taken/pending), not `status`.
+
 **"Over time" scope (resolves GAPS.md G7):** the MVP has no `sprints` entity. The Phase 6 trend dashboard groups by calendar time (`meetings.occurred_at`), not by sprint — PRD/Roadmap wording of "across sprints" should be read as "over time." A `sprints` table is a clean post-MVP addition if needed later, not a schema change to `findings`.
 
 ### 2.4 Diagnosis and suggestions
@@ -228,7 +236,10 @@ output: {
   blockers:     [{ description: string, owner: string | null }],
   risks:        [{ description: string, owner: string | null }],
   dependencies: [{ description: string, owner: string | null }],
-  decisions:    [{ description: string, decision_status: 'taken' | 'pending', owner: string | null }]
+  decisions:    [{ description: string, decision_status: 'taken' | 'pending', owner: string | null }],
+  resolved_mentions: [{ finding_type: 'blocker' | 'risk' | 'dependency', description: string }]
+    -- description describes the ORIGINAL issue (for matching against an earlier finding), not the resolution.
+    -- Only populated when the transcript explicitly states an earlier issue is resolved — see 2.3 "Resolution".
 }
 ```
 

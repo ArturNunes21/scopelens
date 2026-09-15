@@ -122,6 +122,23 @@ async function matchRecurrence(
   return data?.[0] ?? null;
 }
 
+async function matchFindingToResolve(
+  workspaceId: string,
+  findingType: string,
+  description: string,
+  excludeMeetingId: string
+): Promise<{ recurrence_group_id: string; similarity: number } | null> {
+  const { data, error } = await admin.rpc("match_finding_to_resolve", {
+    p_workspace_id: workspaceId,
+    p_finding_type: findingType,
+    p_description: description,
+    p_threshold: 0.25,
+    p_exclude_meeting_id: excludeMeetingId,
+  });
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
 describe("Recurrence matching (Phase 4)", () => {
   let s: Seed;
 
@@ -265,4 +282,220 @@ describe("Recurrence matching (Phase 4)", () => {
     },
     30000
   );
+});
+
+// Phase 6 prerequisite: findings.status only ever moves to 'resolved' via the
+// manual toggle or an explicit resolution mention in a later transcript
+// (never inferred from an issue simply not recurring) — see
+// src/lib/ai/extraction.ts's resolved_mentions and pipeline.ts's wiring.
+describe("Resolution matching (Phase 6 prerequisite)", () => {
+  let s: Seed;
+
+  beforeAll(async () => {
+    s = await seed();
+  }, 30000);
+
+  afterAll(async () => {
+    await admin.from("findings").delete().eq("workspace_id", s.workspaceId);
+    await admin.from("meetings").delete().eq("workspace_id", s.workspaceId);
+    await admin.from("workspaces").delete().eq("id", s.workspaceId);
+    await admin.from("workspaces").delete().eq("id", s.otherWorkspaceId);
+  });
+
+  it("matches an earlier meeting's open finding by type and description", async () => {
+    const seededId = await insertFinding({
+      workspaceId: s.workspaceId,
+      meetingId: s.meeting1Id,
+      findingType: "blocker",
+      description: "CI runners are out of disk space, blocking all builds",
+    });
+
+    const match = await matchFindingToResolve(
+      s.workspaceId,
+      "blocker",
+      "CI runners were out of disk space and blocking builds",
+      s.meeting2Id
+    );
+
+    expect(match).not.toBeNull();
+    expect(match!.recurrence_group_id).toBe(seededId);
+  });
+
+  it("excludes the mentioning meeting's own findings", async () => {
+    const sameMeetingId = await insertFinding({
+      workspaceId: s.workspaceId,
+      meetingId: s.meeting2Id,
+      findingType: "risk",
+      description: "Third-party API rate limits may throttle the import job",
+    });
+
+    const match = await matchFindingToResolve(
+      s.workspaceId,
+      "risk",
+      "Third-party API rate limits may throttle the import job",
+      s.meeting2Id
+    );
+
+    expect(match).toBeNull();
+    // Sanity check the row really exists (would match if not self-excluded).
+    const selfMatch = await matchFindingToResolve(
+      s.workspaceId,
+      "risk",
+      "Third-party API rate limits may throttle the import job",
+      s.meeting1Id
+    );
+    expect(selfMatch!.recurrence_group_id).toBe(sameMeetingId);
+  });
+
+  it("does not match an already-resolved finding", async () => {
+    await insertFinding({
+      workspaceId: s.workspaceId,
+      meetingId: s.meeting1Id,
+      findingType: "dependency",
+      description: "Waiting on the design team to hand off final mockups",
+      status: "resolved",
+    });
+
+    const match = await matchFindingToResolve(
+      s.workspaceId,
+      "dependency",
+      "Waiting on the design team to hand off final mockups",
+      s.meeting2Id
+    );
+
+    expect(match).toBeNull();
+  });
+
+  it(
+    "wires resolution detection into the real pipeline end-to-end",
+    async () => {
+      const seededId = await insertFinding({
+        workspaceId: s.workspaceId,
+        meetingId: s.meeting1Id,
+        findingType: "blocker",
+        description: "Staging database credentials rotated and broke every service's connection",
+      });
+
+      const { error } = await admin
+        .from("meetings")
+        .update({
+          transcript_raw:
+            "Dev1: quick update — the staging database credentials issue from last time is fully resolved now, all services reconnected fine.",
+        })
+        .eq("id", s.meeting2Id);
+      if (error) throw error;
+
+      await runExtractionPipeline(s.meeting2Id, s.workspaceId);
+
+      const { data: finding, error: findingError } = await admin
+        .from("findings")
+        .select("status, resolved_at")
+        .eq("id", seededId)
+        .single();
+      if (findingError) throw findingError;
+
+      expect(finding!.status).toBe("resolved");
+      expect(finding!.resolved_at).not.toBeNull();
+    },
+    30000
+  );
+
+  it(
+    "resolves every open occurrence of a recurring issue, not just one",
+    async () => {
+      // Two prior open occurrences of the SAME recurring blocker, sharing one
+      // recurrence_group_id (as findRecurrenceMatch would have produced across
+      // two earlier meetings) — a mention resolving the issue must close both,
+      // not just whichever single row the similarity search ranks highest.
+      const rootId = await insertFinding({
+        workspaceId: s.workspaceId,
+        meetingId: s.meeting1Id,
+        findingType: "blocker",
+        description: "Search indexing job keeps timing out on large workspaces",
+      });
+      const { error: secondOccurrenceError } = await admin.from("findings").insert({
+        id: randomUUID(),
+        workspace_id: s.workspaceId,
+        meeting_id: s.meeting1Id,
+        finding_type: "blocker",
+        description: "Search indexing is still timing out on big workspaces",
+        owner: null,
+        decision_status: null,
+        status: "open",
+        recurrence_group_id: rootId,
+      });
+      if (secondOccurrenceError) throw secondOccurrenceError;
+
+      const { error } = await admin
+        .from("meetings")
+        .update({
+          transcript_raw:
+            "Dev1: good news — the search indexing timeout issue we've been tracking is resolved, indexing completes fine now even on our largest workspace.",
+        })
+        .eq("id", s.meeting2Id);
+      if (error) throw error;
+
+      await runExtractionPipeline(s.meeting2Id, s.workspaceId);
+
+      const { data: groupFindings, error: groupError } = await admin
+        .from("findings")
+        .select("status, resolved_at")
+        .eq("recurrence_group_id", rootId);
+      if (groupError) throw groupError;
+
+      expect(groupFindings).toHaveLength(2);
+      for (const f of groupFindings!) {
+        expect(f.status).toBe("resolved");
+        expect(f.resolved_at).not.toBeNull();
+      }
+    },
+    30000
+  );
+
+  // Not an LLM end-to-end test like the ones above — eliciting a transcript
+  // that both raises AND resolves the same issue in one turn isn't a
+  // reliable model behavior to depend on. Exercises the exact bulk-update
+  // filter pipeline.ts uses directly (recurrence_group_id + status='open' +
+  // meeting_id != this meeting), which is the actual protection mechanism.
+  it("never resolves this meeting's own row, even when it shares the matched group", async () => {
+    const rootId = await insertFinding({
+      workspaceId: s.workspaceId,
+      meetingId: s.meeting1Id,
+      findingType: "blocker",
+      description: "Notification service silently drops webhooks under load",
+    });
+    // Simulates this meeting's own finding having already been joined into
+    // the same recurrence group by the earlier recurrence-matching step,
+    // before resolved_mentions processing runs (see pipeline.ts ordering).
+    const ownFindingId = await insertFinding({
+      workspaceId: s.workspaceId,
+      meetingId: s.meeting2Id,
+      findingType: "blocker",
+      description: "Notification service is still dropping webhooks under load",
+    });
+    await admin
+      .from("findings")
+      .update({ recurrence_group_id: rootId })
+      .eq("id", ownFindingId);
+
+    const { data: updated, error } = await admin
+      .from("findings")
+      .update({ status: "resolved", resolved_at: new Date().toISOString() })
+      .eq("recurrence_group_id", rootId)
+      .eq("status", "open")
+      .neq("meeting_id", s.meeting2Id)
+      .select("id");
+    if (error) throw error;
+
+    expect(updated).toHaveLength(1);
+    expect(updated![0].id).toBe(rootId);
+
+    const { data: ownFinding, error: ownError } = await admin
+      .from("findings")
+      .select("status")
+      .eq("id", ownFindingId)
+      .single();
+    if (ownError) throw ownError;
+    expect(ownFinding!.status).toBe("open");
+  });
 });
