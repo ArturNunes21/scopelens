@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/workspace";
 import { MeetingStatusBadge } from "./status-badge";
 import { RetryButton } from "./retry-button";
+import { FindingResolveToggle } from "./finding-resolve-toggle";
 
 // Extends the Server Action timeout for `retryMeeting`'s 3 chained AI calls
 // (GAPS.md G15). See ARCHITECTURE.md section 3.
@@ -55,7 +56,7 @@ export default async function MeetingDetailPage({
   ] = await Promise.all([
     supabase
       .from("findings")
-      .select("id, finding_type, description, owner, decision_status")
+      .select("id, finding_type, description, owner, decision_status, status")
       .eq("meeting_id", id)
       .order("created_at", { ascending: true }),
     supabase
@@ -206,21 +207,27 @@ export default async function MeetingDetailPage({
                         {items.map((finding) => (
                           <li
                             key={finding.id}
-                            className="text-sm text-zinc-600 dark:text-zinc-400"
+                            className="flex items-start justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-400"
                           >
-                            {finding.description}
-                            {finding.owner && (
-                              <span className="text-zinc-500 dark:text-zinc-500">
-                                {" "}
-                                — {finding.owner}
-                              </span>
-                            )}
-                            {finding.decision_status && (
-                              <span className="text-zinc-500 dark:text-zinc-500">
-                                {" "}
-                                ({finding.decision_status})
-                              </span>
-                            )}
+                            <span>
+                              {finding.description}
+                              {finding.owner && (
+                                <span className="text-zinc-500 dark:text-zinc-500">
+                                  {" "}
+                                  — {finding.owner}
+                                </span>
+                              )}
+                              {finding.decision_status && (
+                                <span className="text-zinc-500 dark:text-zinc-500">
+                                  {" "}
+                                  ({finding.decision_status})
+                                </span>
+                              )}
+                            </span>
+                            <FindingResolveToggle
+                              findingId={finding.id}
+                              status={finding.status as "open" | "resolved"}
+                            />
                           </li>
                         ))}
                       </ul>

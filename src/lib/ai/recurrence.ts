@@ -44,3 +44,30 @@ export async function findRecurrenceMatch(
   const row = data?.[0];
   return row ? { recurrenceGroupId: row.recurrence_group_id, similarity: row.similarity } : null;
 }
+
+export type ResolutionMatch = { findingId: string; similarity: number } | null;
+
+// Looks for an existing OPEN finding of the same type/workspace that a
+// resolved_mention from THIS meeting's extraction refers to (Phase 6
+// prerequisite — the only writer of findings.status = 'resolved' besides the
+// manual toggle). Same similarity threshold and matching semantics as
+// findRecurrenceMatch; excludes the mentioning meeting's own findings since,
+// unlike recurrence matching, this runs AFTER they're already inserted.
+export async function findFindingToResolve(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  workspaceId: string,
+  findingType: string,
+  description: string,
+  excludeMeetingId: string
+): Promise<ResolutionMatch> {
+  const { data, error } = await supabase.rpc("match_finding_to_resolve", {
+    p_workspace_id: workspaceId,
+    p_finding_type: findingType,
+    p_description: description,
+    p_threshold: getRecurrenceThreshold(),
+    p_exclude_meeting_id: excludeMeetingId,
+  });
+  if (error) throw new Error(`Resolution match query failed: ${error.message}`);
+  const row = data?.[0];
+  return row ? { findingId: row.finding_id, similarity: row.similarity } : null;
+}
