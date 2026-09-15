@@ -156,6 +156,26 @@ export async function runExtractionPipeline(
       if (insertError) throw new Error(`Could not save findings: ${insertError.message}`);
     }
 
+    // Logged immediately after the findings that cost this Haiku call
+    // produced, and deliberately BEFORE the resolved_mentions step below: the
+    // Anthropic API charge already happened the moment extractFindings()
+    // returned above, so it must be recorded regardless of whether a LATER
+    // step in this run fails. isOverMonthlyBudget (GAPS.md G12) sums
+    // ai_calls.cost_usd — logging this any later would let a resolved_mentions
+    // failure (or any downstream failure) hide real, already-incurred spend
+    // from the budget check on a retry.
+    const { error: aiCallError } = await supabase.from("ai_calls").insert({
+      workspace_id: workspaceId,
+      meeting_id: meetingId,
+      stage: "extraction",
+      model: "claude-haiku-4-5",
+      tokens_in: result.tokensIn,
+      tokens_out: result.tokensOut,
+      cost_usd: result.costUsd,
+      latency_ms: result.latencyMs,
+    });
+    if (aiCallError) throw new Error(`Could not log AI call: ${aiCallError.message}`);
+
     // Explicit resolution detection (Phase 6 prerequisite): matching is
     // read-only and independent per mention, same reasoning as the
     // recurrence-match Promise.all above. Resolves every OPEN finding in the
@@ -208,18 +228,6 @@ export async function runExtractionPipeline(
     for (const settlement of settlements) {
       if (settlement.status === "rejected") throw settlement.reason;
     }
-
-    const { error: aiCallError } = await supabase.from("ai_calls").insert({
-      workspace_id: workspaceId,
-      meeting_id: meetingId,
-      stage: "extraction",
-      model: "claude-haiku-4-5",
-      tokens_in: result.tokensIn,
-      tokens_out: result.tokensOut,
-      cost_usd: result.costUsd,
-      latency_ms: result.latencyMs,
-    });
-    if (aiCallError) throw new Error(`Could not log AI call: ${aiCallError.message}`);
 
     const currentFindings: FindingForDiagnosis[] = rows.map((r) => ({
       id: r.id,
@@ -327,6 +335,16 @@ export async function runExtractionPipeline(
     // Also revert any OTHER meeting's findings this run resolved via
     // resolved_mentions — clearPipelineRows only touches this meeting's own
     // rows, but a cross-meeting side effect must not survive a failed run.
+    //
+    // Known, accepted gap (same shape as findRecurrenceMatch's documented
+    // concurrency gap above): this revert is unconditional, with no
+    // version/timestamp check. If a user manually re-toggles one of these
+    // exact findings via toggleFindingStatus while THIS run is still in
+    // flight (diagnosis/synthesis takes several seconds), and this run then
+    // fails, the revert overwrites that concurrent manual action. No
+    // optimistic-locking infra exists anywhere else in this codebase either;
+    // not worth introducing for a MVP-scale race this narrow (same finding,
+    // same few-second window, one specific run failing after resolving it).
     if (resolvedFindingIds.length > 0) {
       await supabase
         .from("findings")
