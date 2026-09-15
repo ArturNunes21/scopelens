@@ -64,6 +64,14 @@ export async function runExtractionPipeline(
 ): Promise<void> {
   const supabase = createServiceRoleClient();
 
+  // Populated by the resolved_mentions step below — findings belonging to
+  // OTHER meetings that get flipped to 'resolved' as a side effect of this
+  // run. Tracked here (outside the try block) so the catch block can revert
+  // them on failure: clearPipelineRows only deletes THIS meeting's own rows,
+  // but a cross-meeting write must not survive a failed/retried run either
+  // (GAPS.md G13 "no partial data left behind" applies here too).
+  const resolvedFindingIds: string[] = [];
+
   if (await isOverMonthlyBudget(supabase, workspaceId)) {
     await supabase
       .from("meetings")
@@ -148,24 +156,57 @@ export async function runExtractionPipeline(
       if (insertError) throw new Error(`Could not save findings: ${insertError.message}`);
     }
 
-    // Explicit resolution detection (Phase 6 prerequisite): this meeting's
-    // findings are already committed above, so matches here can only be
-    // earlier meetings' rows via the exclude-meeting-id filter in the SQL
-    // function — never this meeting's own just-inserted findings.
-    for (const mention of result.data.resolved_mentions) {
-      const match = await findFindingToResolve(
-        supabase,
-        workspaceId,
-        mention.finding_type,
-        mention.description,
-        meetingId
-      );
-      if (match) {
-        await supabase
+    // Explicit resolution detection (Phase 6 prerequisite): matching is
+    // read-only and independent per mention, same reasoning as the
+    // recurrence-match Promise.all above. Resolves every OPEN finding in the
+    // matched recurrence_group_id, not just one row — a recurring issue can
+    // have multiple open occurrences (see recurrence.ts). The bulk update
+    // excludes THIS meeting's own findings explicitly (not just the RPC
+    // match source): the group it resolves into could also contain a row
+    // this same run just inserted via recurrence matching above, and that
+    // row must survive as this meeting's own current statement, not be
+    // silently closed by an unrelated mention landing in the same group.
+    //
+    // Uses allSettled, not all: unlike the read-only findRecurrenceMatch
+    // Promise.all above (whose one write is a single insert AFTER the whole
+    // parallel step resolves), each mention here does its OWN independent
+    // write. Promise.all's fail-fast semantics abandon the aggregate await
+    // the instant the FIRST mention rejects, while the OTHER mentions' writes
+    // keep running unobserved in the background — one could complete (and
+    // resolve another meeting's finding) strictly AFTER the catch block below
+    // has already read resolvedFindingIds and reverted, permanently leaking
+    // an untracked cross-meeting write. allSettled always waits for every
+    // mention to finish one way or another before this line returns, so
+    // resolvedFindingIds is guaranteed complete before any error is thrown.
+    const settlements = await Promise.allSettled(
+      result.data.resolved_mentions.map(async (mention) => {
+        const match = await findFindingToResolve(
+          supabase,
+          workspaceId,
+          mention.finding_type,
+          mention.description,
+          meetingId
+        );
+        if (!match) return [];
+
+        const { data: updated, error: resolveError } = await supabase
           .from("findings")
           .update({ status: "resolved", resolved_at: new Date().toISOString() })
-          .eq("id", match.findingId);
-      }
+          .eq("recurrence_group_id", match.recurrenceGroupId)
+          .eq("status", "open")
+          .neq("meeting_id", meetingId)
+          .select("id");
+        if (resolveError) {
+          throw new Error(`Could not resolve mentioned finding: ${resolveError.message}`);
+        }
+        return (updated ?? []).map((r) => r.id as string);
+      })
+    );
+    for (const settlement of settlements) {
+      if (settlement.status === "fulfilled") resolvedFindingIds.push(...settlement.value);
+    }
+    for (const settlement of settlements) {
+      if (settlement.status === "rejected") throw settlement.reason;
     }
 
     const { error: aiCallError } = await supabase.from("ai_calls").insert({
@@ -283,6 +324,15 @@ export async function runExtractionPipeline(
     // No partial data left behind (resolves GAPS.md G13): drop whatever any
     // stage of this failed attempt may have inserted before the error.
     await clearPipelineRows(supabase, meetingId);
+    // Also revert any OTHER meeting's findings this run resolved via
+    // resolved_mentions — clearPipelineRows only touches this meeting's own
+    // rows, but a cross-meeting side effect must not survive a failed run.
+    if (resolvedFindingIds.length > 0) {
+      await supabase
+        .from("findings")
+        .update({ status: "open", resolved_at: null })
+        .in("id", resolvedFindingIds);
+    }
     await supabase
       .from("meetings")
       .update({
