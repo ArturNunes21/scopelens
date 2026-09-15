@@ -2,10 +2,12 @@
 
 Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they close; reference the item number in the commit/PR message (e.g. "closes Phase 0 #4-#6").
 
+> ⚠️ **MANUAL ACTION PENDING** — G15: PR #13 (not yet merged) hardcodes `maxDuration=60` in `meetings/new/layout.tsx` and `meetings/[id]/page.tsx`, but nobody has confirmed 60s is actually enough. Once merged, open the Vercel dashboard → Project → Settings → Functions and check the real plan/Fluid Compute ceiling; if a real ~30-45min transcript's 3 chained AI calls don't fit in 60s, use the per-stage-route fallback already documented in ARCHITECTURE.md section 3.
+
 ## Phase 0.5 — Spec review gap remediation ([GAPS.md](./GAPS.md))
 
 - [x] G1-G14, G17-G20: doc-level fixes applied to ARCHITECTURE.md/PRD.md/ROADMAP.md/CONTEXT.md
-- [ ] G15: verify real Vercel `maxDuration` once the account exists (blocks nothing now, revisit before Phase 5)
+- [ ] G15: `maxDuration=60` set in code, pending in PR #13 — **manual verification of the real plan ceiling still needed, see banner above**
 - [x] G16: external anti-pause pinger configured (cron-job.org → `/api/health`)
 
 ## Phase 0 — Foundation and instrumentation
