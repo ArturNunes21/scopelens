@@ -19,6 +19,24 @@ export function MeetingStatusBadge({
   const [status, setStatus] = useState(initialStatus);
   const router = useRouter();
 
+  // router.refresh() intentionally preserves this component's local state
+  // (that's the whole point — it's what lets the Realtime-driven `status`
+  // survive a refresh without flashing). But that means the reverse never
+  // happens on its own: if a server-fetched initialStatus ever arrives
+  // ahead of (or instead of) this component's own Realtime event — a missed
+  // event, the server action's own implicit post-mutation refresh, a plain
+  // page reload — local state can drift from the authoritative DB value.
+  // Re-sync during render when the server hands us a new initialStatus
+  // (React's documented "adjusting state when a prop changes" pattern —
+  // https://react.dev/learn/you-might-not-need-an-effect — not an effect,
+  // since setState-in-effect is exactly the cascading-render anti-pattern
+  // that pattern exists to avoid).
+  const [prevInitialStatus, setPrevInitialStatus] = useState(initialStatus);
+  if (initialStatus !== prevInitialStatus) {
+    setPrevInitialStatus(initialStatus);
+    setStatus(initialStatus);
+  }
+
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
