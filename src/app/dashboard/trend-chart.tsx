@@ -18,8 +18,17 @@ function niceMax(value: number): number {
   return step * magnitude;
 }
 
+// weekKey (src/lib/dashboard.ts) produces a date-only "YYYY-MM-DD" string,
+// which `new Date()` parses as UTC midnight. Formatting that in the viewer's
+// LOCAL timezone (the default) would roll it back a day for any negative UTC
+// offset (most of the Americas) — pin the format to UTC so the label always
+// matches the UTC week-start weekKey actually computed.
 function formatWeek(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 // Ordinal x-axis (evenly spaced weeks) rather than a true time scale — sparse

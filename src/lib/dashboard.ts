@@ -55,11 +55,17 @@ export function buildOpenCounts(findings: FindingRow[]): {
   return { openCounts, pendingDecisions };
 }
 
+// Decisions are excluded (like buildOpenCounts above) — their lifecycle is
+// decision_status (taken/pending), not status, so status/resolved_at is
+// never meaningfully set for them (see ARCHITECTURE.md 2.3 "Resolution").
+// Counting them here would permanently inflate the "open" line with rows
+// that can never move to "resolved".
 export function buildTrend(findings: FindingRow[]): TrendPoint[] {
   const opened = new Map<string, number>();
   const resolved = new Map<string, number>();
 
   for (const f of findings) {
+    if (f.finding_type === "decision") continue;
     const occurred = occurredAt(f.meeting);
     if (occurred) {
       const k = weekKey(occurred);
@@ -82,6 +88,13 @@ export function buildTrend(findings: FindingRow[]): TrendPoint[] {
   });
 }
 
+// Unlike buildTrend, decisions are deliberately kept here: a decision that
+// keeps getting re-raised across meetings is itself useful signal, even
+// though its `anyOpen` badge is driven by `status` (which decisions never
+// move off 'open' — see ARCHITECTURE.md 2.3) rather than `decision_status`.
+// A recurring decision group will therefore always show "Open", which is an
+// accepted simplification, not a bug: decision_status-aware badging is a
+// bigger redesign than this pass covers.
 export function buildRecurringGroups(findings: FindingRow[]): RecurringGroup[] {
   const groups = new Map<string, FindingRow[]>();
   for (const f of findings) {

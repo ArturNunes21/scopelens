@@ -76,6 +76,24 @@ describe("buildTrend", () => {
     const findings = [finding({ meeting: null })];
     expect(buildTrend(findings)).toEqual([]);
   });
+
+  it("excludes decisions — their lifecycle is decision_status, not status, so they'd permanently inflate the open line", () => {
+    const findings = [
+      finding({ finding_type: "blocker", meeting: { occurred_at: "2026-08-24T00:00:00Z" } }),
+      finding({
+        finding_type: "decision",
+        decision_status: "pending",
+        meeting: { occurred_at: "2026-08-24T00:00:00Z" },
+      }),
+      finding({
+        finding_type: "decision",
+        decision_status: "taken",
+        meeting: { occurred_at: "2026-08-24T00:00:00Z" },
+      }),
+    ];
+
+    expect(buildTrend(findings)).toEqual([{ week: "2026-08-24", open: 1, resolved: 0 }]);
+  });
 });
 
 describe("buildRecurringGroups", () => {
