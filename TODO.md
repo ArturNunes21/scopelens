@@ -57,6 +57,8 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 6 — Trend dashboard
 
+- [x] Prerequisite: `findings.status` had no writer anywhere in the codebase before this — resolved two ways (2026-09-15): (1) manual toggle (`toggleFindingStatus` server action + button on `/meetings/[id]`), (2) explicit resolution detection — Stage 1 extraction now also returns `resolved_mentions`, matched against open findings via new `match_finding_to_resolve` SQL function (migration `20260915000000`), wired into `pipeline.ts` after findings insert. Covered by 4 new tests in `tests/recurrence-matching.test.ts` (10/10 → 14/14), including a real end-to-end pipeline run. Never inferred from an issue simply not recurring.
+- [ ] Spec pass on exact charts/metrics (deferred per ROADMAP.md principle — do this now that Phase 3-5 data + resolution tracking exist)
 - [ ] Query aggregated by `recurrence_group_id`
 
 ## Phase 7 — Billing

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getEnvNumber } from "@/lib/env";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { extractFindings } from "./extraction";
-import { findRecurrenceMatch } from "./recurrence";
+import { findRecurrenceMatch, findFindingToResolve } from "./recurrence";
 import { diagnoseMeeting, type FindingForDiagnosis } from "./diagnosis";
 import { synthesizeMeeting } from "./synthesis";
 
@@ -146,6 +146,26 @@ export async function runExtractionPipeline(
     if (rows.length > 0) {
       const { error: insertError } = await supabase.from("findings").insert(rows);
       if (insertError) throw new Error(`Could not save findings: ${insertError.message}`);
+    }
+
+    // Explicit resolution detection (Phase 6 prerequisite): this meeting's
+    // findings are already committed above, so matches here can only be
+    // earlier meetings' rows via the exclude-meeting-id filter in the SQL
+    // function — never this meeting's own just-inserted findings.
+    for (const mention of result.data.resolved_mentions) {
+      const match = await findFindingToResolve(
+        supabase,
+        workspaceId,
+        mention.finding_type,
+        mention.description,
+        meetingId
+      );
+      if (match) {
+        await supabase
+          .from("findings")
+          .update({ status: "resolved", resolved_at: new Date().toISOString() })
+          .eq("id", match.findingId);
+      }
     }
 
     const { error: aiCallError } = await supabase.from("ai_calls").insert({

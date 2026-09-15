@@ -114,6 +114,12 @@ findings
 
 **Reopened findings:** if a finding was `resolved` and the same issue resurfaces in a later meeting, matching only scans `open` findings by design, so the new occurrence starts a **new** `recurrence_group_id` rather than reopening the old chain — a resolved risk resurfacing is itself a signal worth surfacing distinctly, not silently merged into history. Revisit if this produces noisy duplicate chains in practice.
 
+**Resolution (Phase 6 prerequisite):** `status` only ever transitions to `resolved` two ways — never inferred from an issue simply not recurring:
+1. **Manual** — a user toggles a finding on `/meetings/[id]` (`toggleFindingStatus` server action).
+2. **Explicit mention** — Stage 1 extraction also returns `resolved_mentions` (finding_type + description of the *original* issue) whenever a transcript explicitly states an earlier blocker/risk/dependency is resolved. The pipeline matches each mention against the workspace's open findings of that type via `match_finding_to_resolve` (same `pg_trgm` similarity/threshold as recurrence matching, but excluding the mentioning meeting's own just-inserted rows, since this runs *after* they're committed rather than before like recurrence matching) and flips the match to `resolved`.
+
+Decisions are excluded from resolved_mentions — their lifecycle is `decision_status` (taken/pending), not `status`.
+
 **"Over time" scope (resolves GAPS.md G7):** the MVP has no `sprints` entity. The Phase 6 trend dashboard groups by calendar time (`meetings.occurred_at`), not by sprint — PRD/Roadmap wording of "across sprints" should be read as "over time." A `sprints` table is a clean post-MVP addition if needed later, not a schema change to `findings`.
 
 ### 2.4 Diagnosis and suggestions
@@ -228,7 +234,10 @@ output: {
   blockers:     [{ description: string, owner: string | null }],
   risks:        [{ description: string, owner: string | null }],
   dependencies: [{ description: string, owner: string | null }],
-  decisions:    [{ description: string, decision_status: 'taken' | 'pending', owner: string | null }]
+  decisions:    [{ description: string, decision_status: 'taken' | 'pending', owner: string | null }],
+  resolved_mentions: [{ finding_type: 'blocker' | 'risk' | 'dependency', description: string }]
+    -- description describes the ORIGINAL issue (for matching against an earlier finding), not the resolution.
+    -- Only populated when the transcript explicitly states an earlier issue is resolved — see 2.3 "Resolution".
 }
 ```
 

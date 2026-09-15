@@ -15,6 +15,11 @@ const FindingSchema = z.object({
   owner: z.string().nullable(),
 });
 
+const ResolvedMentionSchema = z.object({
+  finding_type: z.enum(["blocker", "risk", "dependency"]),
+  description: z.string(),
+});
+
 export const ExtractionSchema = z.object({
   blockers: z.array(FindingSchema),
   risks: z.array(FindingSchema),
@@ -26,6 +31,7 @@ export const ExtractionSchema = z.object({
       owner: z.string().nullable(),
     })
   ),
+  resolved_mentions: z.array(ResolvedMentionSchema),
 });
 
 export type Extraction = z.infer<typeof ExtractionSchema>;
@@ -46,11 +52,14 @@ Identify every distinct:
 - dependency: work that depends on another person/team/system
 - decision: a choice that was made or needs to be made, with decision_status "taken" (already decided) or "pending" (still open)
 
+Also identify every explicit statement that a blocker, risk, or dependency discussed in an EARLIER meeting has now been resolved, fixed, unblocked, or no longer applies — put these in resolved_mentions. Only include a mention when the transcript is explicit about it being resolved; never infer resolution from something simply not being mentioned again.
+
 Rules:
 - owner is the person named as responsible, or null if no one is named — never invent a name.
 - description is a concise, self-contained sentence (a reader with no other context should understand it).
 - Skip small talk and status updates that aren't a blocker/risk/dependency/decision.
-- If a category has no findings, return an empty array for it — do not invent findings to fill it.`;
+- If a category has no findings, return an empty array for it — do not invent findings to fill it.
+- For resolved_mentions, description should describe the ORIGINAL issue being resolved (so it can be matched against the earlier finding), not the resolution itself.`;
 
 export async function extractFindings(
   transcript: string,
