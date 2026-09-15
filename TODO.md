@@ -48,9 +48,12 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 5 — Multi-perspective diagnosis and synthesis (stages 2-3)
 
-- [ ] Diagnostic lenses → `diagnostic_notes`
-- [ ] Executive synthesis → `executive_summary` + `suggested_actions`
-- [ ] Full async flow (status + Supabase Realtime)
+- [x] Diagnostic lenses → `diagnostic_notes` (`src/lib/ai/diagnosis.ts`, `claude-sonnet-5`, 3 fixed lenses)
+- [x] Executive synthesis → `executive_summary` + `suggested_actions` (`src/lib/ai/synthesis.ts`, `claude-opus-5`)
+- [x] Full async flow (status + Supabase Realtime): pipeline chains all 3 stages with idempotent rollback; `/meetings/[id]` subscribes via Realtime, no polling; migration `20260914010000_enable_meetings_realtime.sql` adds `meetings` to the publication
+- [x] Retry wired to the UI (`retryMeeting` server action + button on the failed state) — mechanism existed since Phase 3 (GAPS.md G13) but was never exposed until now
+- [x] Verified locally (2026-09-14): typecheck/lint/build clean; dev server smoke test (unauthenticated `/meetings` and `/meetings/[id]` redirect to `/login`, no server errors)
+- [x] Verified end-to-end in production data (2026-09-14): real transcript (daily standup) produced 1 blocker, 1 risk, 1 dependency, 2 decisions, a `continuity` diagnostic note correctly referencing a prior meeting's Redis decision, executive summary, and 6 prioritized suggested actions. Manual testing surfaced and fixed 2 real bugs: (1) `match_recurrence_finding` threw "structure of query does not match function result type" — pg_trgm's `similarity()` returns `real`, plpgsql's `RETURN QUERY` needed an explicit cast to the declared `float8` column (`20260914020000` migration); (2) the status badge on `/meetings/[id]` went stale after a successful Retry (page content updated, badge didn't) — `useState`'s initial value is only applied on mount, so `router.refresh()` handing a new `initialStatus` prop never resynced the already-mounted badge; fixed by re-deriving local state from the prop during render. Retry-driven status transition (Failed → Processing → Completed) confirmed live via Realtime, no manual refresh
 
 ## Phase 6 — Trend dashboard
 
