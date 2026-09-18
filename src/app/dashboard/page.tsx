@@ -52,12 +52,20 @@ export default async function DashboardPage() {
               Open vs. resolved across every meeting in this workspace
             </p>
           </div>
-          <Link
-            href="/meetings"
-            className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
-          >
-            Meetings →
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/billing"
+              className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+            >
+              Billing
+            </Link>
+            <Link
+              href="/meetings"
+              className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+            >
+              Meetings →
+            </Link>
+          </div>
         </div>
 
         {error && (

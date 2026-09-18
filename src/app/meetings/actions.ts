@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireWorkspace } from "@/lib/workspace";
 import { extractTranscript } from "./transcript";
 import { runExtractionPipeline } from "@/lib/ai/pipeline";
+import { isOverFreePlanMeetingLimit, monthStartUtc } from "@/lib/billing";
 
 const MEETING_TYPES = ["daily", "planning", "retro", "kickoff"] as const;
 
@@ -54,6 +55,31 @@ export async function createMeeting(
   }
 
   const { supabase, user, workspaceId } = await requireWorkspace();
+
+  // Feature gate by plan (ROADMAP.md Phase 7): checked here, the actual
+  // insert boundary, rather than in the UI alone.
+  const { data: workspace, error: workspaceError } = await supabase
+    .from("workspaces")
+    .select("plan")
+    .eq("id", workspaceId)
+    .single();
+  if (workspaceError || !workspace) {
+    return { error: "Could not verify workspace plan." };
+  }
+
+  const { count: meetingsThisMonth, error: countError } = await supabase
+    .from("meetings")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .gte("created_at", monthStartUtc().toISOString());
+  if (countError) {
+    return { error: "Could not verify plan usage." };
+  }
+  if (isOverFreePlanMeetingLimit(workspace.plan, meetingsThisMonth ?? 0)) {
+    return {
+      error: "Free plan meeting limit reached for this month. Upgrade to Pro on the Billing page to keep going.",
+    };
+  }
 
   const { data: meeting, error } = await supabase
     .from("meetings")
