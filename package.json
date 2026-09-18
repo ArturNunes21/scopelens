@@ -20,6 +20,7 @@
     "posthog-node": "^5.21.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "stripe": "^22.6.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
