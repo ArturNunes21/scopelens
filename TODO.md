@@ -75,7 +75,7 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 - [ ] Empty/error states, seeded demo data
 - [ ] README telling the project's story
 - [ ] Custom domain (optional)
-- [ ] Known issue found during Phase 2 manual testing (2026-08-24): Supabase's default email provider routes magic links through Amazon SES click-tracking (`awstrack.me`); an email security scanner can pre-fetch the link and consume the single-use OTP token before the human clicks, producing an intermittent `invalid_link` on first attempt (a retry always works). A first-contact recruiter hitting this with no guidance is a real risk — before shipping, either configure custom SMTP without click-tracking or add explicit "try again" messaging to the `invalid_link` state
+- [x] Known issue found during Phase 2 manual testing (2026-08-24): Supabase's default email provider routes magic links through Amazon SES click-tracking (`awstrack.me`); an email security scanner can pre-fetch the link and consume the single-use OTP token before the human clicks, producing an intermittent `invalid_link` on first attempt (a retry always works). Mitigated in code (2026-09-29): `invalid_link` copy in `src/app/login/page.tsx` now names the actual cause (security-scanner pre-fetch, not link reuse) instead of a generic message, and the form is already immediately available for a retry — no dead-end page. Root cause still stands: switching Supabase to custom SMTP without click-tracking (Project Settings → Auth → SMTP Settings, needs a provider account e.g. Resend/Postmark) would eliminate the failure itself rather than just explain it; left as optional since it needs a new external account and current mitigation is enough for portfolio use.
 
 ---
 
