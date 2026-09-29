@@ -55,7 +55,12 @@ The first four items unblock Phase 0. The last two only matter for Phases 3 and 
 1. Go to [dashboard.stripe.com](https://dashboard.stripe.com) → create an account.
 2. Make sure the **Test mode** toggle is on (top corner).
 3. **Developers → API keys**, copy the test keys (`sk_test_...`, `pk_test_...`) into `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
-4. `STRIPE_WEBHOOK_SECRET` is only generated once the webhook endpoint exists (that happens when Phase 7 is implemented).
+4. **Product catalog → Add product** — name it "Pro", add a recurring price (any amount, test mode). Copy the price's ID (`price_...`) into `STRIPE_PRICE_ID_PRO`.
+5. **Developers → Webhooks → Add destination** (Phase 7 implemented this: `src/app/api/stripe/webhook/route.ts`):
+   - Endpoint URL: `https://<your-vercel-domain>/api/stripe/webhook`
+   - Events to send: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - After creating it, copy the **Signing secret** (`whsec_...`) into `STRIPE_WEBHOOK_SECRET`.
+6. **Local testing without a public URL:** run `stripe listen --forward-to localhost:3000/api/stripe/webhook` (requires the [Stripe CLI](https://docs.stripe.com/stripe-cli)) — it prints its own `whsec_...` for local use, separate from the dashboard one above.
 
 ## After collecting the keys
 

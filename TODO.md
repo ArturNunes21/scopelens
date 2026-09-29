@@ -66,8 +66,9 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 7 — Billing
 
-- [ ] Stripe Checkout (test mode) + webhook
-- [ ] Feature gate by plan
+- [x] Stripe Checkout (test mode) + webhook — `/billing` page starts a Checkout Session (`createCheckoutSession` server action, `src/app/billing/actions.ts`); `/api/stripe/webhook` verifies the signature (`stripe.webhooks.constructEvent`) and dedupes by `event.id` (new `stripe_webhook_events` table, migration `20260918000000`, RLS-enabled with no policy — service-role only) before updating `workspaces.plan`/`stripe_customer_id`/`stripe_subscription_id` on `checkout.session.completed`, and re-deriving `plan` from `subscription.status` on `customer.subscription.updated`/`.deleted` (resolves GAPS.md G20).
+- [x] Feature gate by plan — `isOverFreePlanMeetingLimit` (`src/lib/billing.ts`, 4 unit tests in `tests/billing.test.ts`) blocks new meetings once a free-plan workspace hits `FREE_PLAN_MEETING_LIMIT` (env var, default 5) meetings in the current UTC calendar month; enforced in `createMeeting` (`src/app/meetings/actions.ts`) right before the insert — the actual trust boundary, not just a UI limit — with an error pointing the user to `/billing`.
+- [x] End-to-end verification in Stripe test mode (2026-09-29): sandbox account created, product "Pro" + recurring test price added, `.env.local` filled. Live Checkout completed (card `4242...`) → `checkout.session.completed` replayed to the local webhook (the CLI's `stripe listen` websocket dropped mid-test, so the event was fetched via API and re-posted with a valid signature instead of relying on the live tunnel) → confirmed in Supabase: `workspaces.plan='pro'`, `stripe_customer_id`/`stripe_subscription_id` set. Canceled the test subscription in the dashboard → `customer.subscription.deleted` replayed the same way → confirmed `plan` reverted to `'free'`.
 
 ## Phase 8 — Hardening for public portfolio use
 

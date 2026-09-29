@@ -26,7 +26,7 @@
 | G17 | Sem limite de tamanho de transcript nem rate limit de ingestão | Custo de IA pode explodir (risco #4 do PRD) | Limite de 50k caracteres por transcript na validação de upload; rate limit real fica pro feature gate do Phase 7 | Doc | ✅ Resolvido |
 | G18 | Estratégia de Supabase Storage pro upload `.txt`/`.vtt` indefinida | Ambiguidade no Phase 2 | Decisão: MVP não usa Storage — arquivo é parseado no upload, só o texto vai pra `transcript_raw`, original é descartado | Doc | ✅ Resolvido |
 | G19 | Sem política de retenção/exclusão de dado sensível | PRD seção 9 chama atenção pra sensibilidade, mas não protege nada disso | Apagar meeting/workspace cascateia tudo (via G4); sem retenção automática por tempo na MVP (decisão explícita, revisitar com usuários reais) | Doc | ✅ Resolvido |
-| G20 | Verificação de assinatura/idempotência do webhook Stripe não especificada | Risco de segurança no Phase 7 | Requisito documentado: `stripe.webhooks.constructEvent` + dedupe por `event.id`; implementação no Phase 7 | Doc | ✅ Resolvido (requisito documentado, implementação no Phase 7) |
+| G20 | Verificação de assinatura/idempotência do webhook Stripe não especificada | Risco de segurança no Phase 7 | `stripe.webhooks.constructEvent` + dedupe por `event.id` via tabela `stripe_webhook_events` (insert-first, unique violation = evento já processado) | Doc+Code | ✅ Resolvido (`src/app/api/stripe/webhook/route.ts`, migration `20260918000000` — verificação end-to-end com conta Stripe real ainda pendente, ver TODO.md) |
 
 ## Plano de remediação (ordem de execução)
 
