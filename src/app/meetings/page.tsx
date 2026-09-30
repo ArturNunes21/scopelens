@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireWorkspace } from "@/lib/workspace";
 import { signOut } from "@/app/login/logout-action";
+import { seedDemoData } from "./actions";
 import { STATUS_LABEL, STATUS_CLASS } from "./status";
 
 export default async function MeetingsPage() {
@@ -61,12 +62,23 @@ export default async function MeetingsPage() {
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 No meetings yet — paste or upload a transcript to get started.
               </p>
-              <Link
-                href="/meetings/new"
-                className="mt-4 inline-block text-sm font-medium text-black underline underline-offset-4 dark:text-zinc-50"
-              >
-                New meeting
-              </Link>
+              <div className="mt-4 flex items-center justify-center gap-4">
+                <Link
+                  href="/meetings/new"
+                  className="text-sm font-medium text-black underline underline-offset-4 dark:text-zinc-50"
+                >
+                  New meeting
+                </Link>
+                <span className="text-sm text-zinc-400 dark:text-zinc-600">or</span>
+                <form action={seedDemoData}>
+                  <button
+                    type="submit"
+                    className="text-sm font-medium text-black underline underline-offset-4 dark:text-zinc-50"
+                  >
+                    Load sample data
+                  </button>
+                </form>
+              </div>
             </div>
           )}
 
