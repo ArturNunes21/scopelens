@@ -5,8 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { requestMagicLink } from "./actions";
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {
+  // Most common cause isn't the user reusing a link — it's their email
+  // provider's security scanner pre-fetching it and consuming the
+  // single-use token before a human ever clicks. Naming that keeps a
+  // first-time visitor from assuming the app itself is broken.
   invalid_link:
-    "This sign-in link is invalid or has already been used — request a new one below.",
+    "This sign-in link already expired or was pre-opened by your email provider's security scanner — just request a new one below and click it right away.",
 };
 
 function LinkError() {
