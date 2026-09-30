@@ -75,13 +75,13 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+      <div className="flex items-center gap-4 text-xs text-secondary">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-0.5 w-3 rounded-full bg-zinc-500 dark:bg-zinc-400" />
+          <span className="inline-block h-0.5 w-3 rounded-full bg-muted" />
           Open
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-0.5 w-3 rounded-full bg-green-600 dark:bg-green-400" />
+          <span className="inline-block h-0.5 w-3 rounded-full bg-status-good" />
           Resolved
         </span>
       </div>
@@ -101,7 +101,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               x2={WIDTH - PAD_RIGHT}
               y1={yFor(tick)}
               y2={yFor(tick)}
-              className="stroke-zinc-200 dark:stroke-zinc-800"
+              className="stroke-gridline"
               strokeWidth={1}
             />
             <text
@@ -109,7 +109,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               y={yFor(tick)}
               textAnchor="end"
               dominantBaseline="middle"
-              className="fill-zinc-500 text-[9px] dark:fill-zinc-500"
+              className="fill-muted text-[9px]"
             >
               {Math.round(tick)}
             </text>
@@ -123,7 +123,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               x={xFor(i)}
               y={HEIGHT - 6}
               textAnchor={i === 0 ? "start" : i === data.length - 1 ? "end" : "middle"}
-              className="fill-zinc-500 text-[9px] dark:fill-zinc-500"
+              className="fill-muted text-[9px]"
             >
               {formatWeek(d.week)}
             </text>
@@ -136,7 +136,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
             x2={xFor(hoverIndex)}
             y1={PAD_TOP}
             y2={PAD_TOP + plotHeight}
-            className="stroke-zinc-300 dark:stroke-zinc-700"
+            className="stroke-gridline"
             strokeWidth={1}
           />
         )}
@@ -144,7 +144,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
         <path
           d={openPath}
           fill="none"
-          className="stroke-zinc-500 dark:stroke-zinc-400"
+          className="stroke-muted"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -152,7 +152,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
         <path
           d={resolvedPath}
           fill="none"
-          className="stroke-green-600 dark:stroke-green-400"
+          className="stroke-status-good"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -164,14 +164,14 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               cx={xFor(i)}
               cy={yFor(d.open)}
               r={4}
-              className="fill-zinc-500 stroke-white dark:fill-zinc-400 dark:stroke-zinc-950"
+              className="fill-muted stroke-surface"
               strokeWidth={2}
             />
             <circle
               cx={xFor(i)}
               cy={yFor(d.resolved)}
               r={4}
-              className="fill-green-600 stroke-white dark:fill-green-400 dark:stroke-zinc-950"
+              className="fill-status-good stroke-surface"
               strokeWidth={2}
             />
           </g>
@@ -181,7 +181,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
           x={xFor(data.length - 1) - 6}
           y={yFor(data[data.length - 1].open) - 8}
           textAnchor="end"
-          className="fill-zinc-600 text-[10px] font-medium dark:fill-zinc-400"
+          className="fill-secondary text-[10px] font-medium"
         >
           {data[data.length - 1].open}
         </text>
@@ -189,7 +189,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
           x={xFor(data.length - 1) - 6}
           y={yFor(data[data.length - 1].resolved) - 8}
           textAnchor="end"
-          className="fill-green-700 text-[10px] font-medium dark:fill-green-400"
+          className="fill-status-good text-[10px] font-medium"
         >
           {data[data.length - 1].resolved}
         </text>
@@ -197,22 +197,19 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
 
       {hovered && hoverIndex !== null && (
         <div
-          className="pointer-events-none absolute top-0 -translate-x-1/2 rounded border border-black/[.08] bg-white px-2.5 py-1.5 text-xs shadow-sm dark:border-white/[.145] dark:bg-zinc-900"
+          className="pointer-events-none absolute top-0 -translate-x-1/2 rounded border border-border bg-surface px-2.5 py-1.5 text-xs shadow-sm"
           style={{
             left: `${(xFor(hoverIndex) / WIDTH) * 100}%`,
           }}
         >
-          <p className="font-medium text-black dark:text-zinc-50">
-            {formatWeek(hovered.week)}
+          <p className="font-medium text-foreground">{formatWeek(hovered.week)}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-secondary">
+            <span className="inline-block h-0.5 w-3 rounded-full bg-muted" />
+            <span className="font-medium text-foreground">{hovered.open}</span> open
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-            <span className="inline-block h-0.5 w-3 rounded-full bg-zinc-500 dark:bg-zinc-400" />
-            <span className="font-medium text-black dark:text-zinc-50">{hovered.open}</span> open
-          </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-            <span className="inline-block h-0.5 w-3 rounded-full bg-green-600 dark:bg-green-400" />
-            <span className="font-medium text-black dark:text-zinc-50">{hovered.resolved}</span>{" "}
-            resolved
+          <p className="mt-0.5 flex items-center gap-1.5 text-secondary">
+            <span className="inline-block h-0.5 w-3 rounded-full bg-status-good" />
+            <span className="font-medium text-foreground">{hovered.resolved}</span> resolved
           </p>
         </div>
       )}

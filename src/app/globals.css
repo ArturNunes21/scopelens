@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
+/* Design tokens — palette validated via the dataviz skill's method
+   (CVD-safe categorical/status colors); see PRD.md section 10 for stack,
+   this file is the only place hex values live. Dark values are selected
+   steps of the same palette, not an automatic filter/invert. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9f9f7;
+  --foreground: #0b0b0b;
+  --surface: #fcfcfb;
+  --secondary: #52514e;
+  --muted: #898781;
+  --border: rgba(11, 11, 11, 0.1);
+  --gridline: #e1e0d9;
+  --accent: #2a78d6;
+  --accent-foreground: #ffffff;
+  --status-good: #0ca30c;
+  --status-good-bg: #e9f7e9;
+  --status-warning: #fab219;
+  --status-warning-bg: #fef3d9;
+  --status-serious: #ec835a;
+  --status-serious-bg: #fdeae2;
+  --status-critical: #d03b3b;
+  --status-critical-bg: #fbe4e4;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-gridline: var(--gridline);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-status-good: var(--status-good);
+  --color-status-good-bg: var(--status-good-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-serious: var(--status-serious);
+  --color-status-serious-bg: var(--status-serious-bg);
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-bg: var(--status-critical-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0d0d0d;
+    --foreground: #ffffff;
+    --surface: #1a1a19;
+    --secondary: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.1);
+    --gridline: #2c2c2a;
+    --accent: #3987e5;
+    --accent-foreground: #ffffff;
+    --status-good: #0ca30c;
+    --status-good-bg: rgba(12, 163, 12, 0.14);
+    --status-warning: #fab219;
+    --status-warning-bg: rgba(250, 178, 25, 0.16);
+    --status-serious: #ec835a;
+    --status-serious-bg: rgba(236, 131, 90, 0.16);
+    --status-critical: #d03b3b;
+    --status-critical-bg: rgba(208, 59, 59, 0.16);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
 }

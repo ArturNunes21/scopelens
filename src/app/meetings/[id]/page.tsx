@@ -4,6 +4,7 @@ import { requireWorkspace } from "@/lib/workspace";
 import { MeetingStatusBadge } from "./status-badge";
 import { RetryButton } from "./retry-button";
 import { FindingResolveToggle } from "./finding-resolve-toggle";
+import { Badge, CARD, CARD_CENTERED, ErrorText } from "@/components/ui";
 
 // Extends the Server Action timeout for `retryMeeting`'s 3 chained AI calls
 // (GAPS.md G15). See ARCHITECTURE.md section 3.
@@ -24,10 +25,10 @@ const LENS_LABEL: Record<string, string> = {
   decision_gap: "Decision gap",
 };
 
-const PRIORITY_CLASS: Record<string, string> = {
-  high: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
-  medium: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  low: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+const PRIORITY_TONE: Record<string, "critical" | "accent" | "neutral"> = {
+  high: "critical",
+  medium: "accent",
+  low: "neutral",
 };
 
 export default async function MeetingDetailPage({
@@ -79,42 +80,33 @@ export default async function MeetingDetailPage({
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
+    <div className="flex flex-1 flex-col bg-background">
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-        <Link
-          href="/meetings"
-          className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
-        >
+        <Link href="/meetings" className="text-sm text-secondary hover:text-foreground">
           ← Meetings
         </Link>
 
         <div className="mt-4 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-              {meeting.title}
-            </h1>
-            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-              {meeting.meeting_type} ·{" "}
-              {new Date(meeting.occurred_at).toLocaleDateString()}
+            <h1 className="text-xl font-semibold text-foreground">{meeting.title}</h1>
+            <p className="mt-0.5 text-xs text-secondary">
+              {meeting.meeting_type} · {new Date(meeting.occurred_at).toLocaleDateString()}
             </p>
           </div>
           <MeetingStatusBadge meetingId={meeting.id} initialStatus={meeting.status} />
         </div>
 
         {(meeting.status === "pending" || meeting.status === "processing") && (
-          <div className="mt-8 rounded-lg border border-black/[.08] bg-white p-8 text-center dark:border-white/[.145] dark:bg-zinc-950">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Analyzing this meeting — this updates automatically, no need to
-              refresh.
+          <div className={`mt-8 ${CARD_CENTERED}`}>
+            <p className="text-sm text-secondary">
+              Analyzing this meeting — this updates automatically, no need to refresh.
             </p>
           </div>
         )}
 
         {meeting.status === "failed" && (
-          <div className="mt-8 rounded-lg border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
-            <p className="text-sm text-red-600 dark:text-red-400">
-              {meeting.error_message ?? "Analysis failed."}
-            </p>
+          <div className={`mt-8 ${CARD}`}>
+            <ErrorText>{meeting.error_message ?? "Analysis failed."}</ErrorText>
             <div className="mt-4">
               <RetryButton meetingId={meeting.id} />
             </div>
@@ -124,41 +116,29 @@ export default async function MeetingDetailPage({
         {meeting.status === "completed" && (
           <div className="mt-8 flex flex-col gap-6">
             {loadError && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                Could not load some of this meeting&apos;s data: {loadError.message}
-              </p>
+              <ErrorText>Could not load some of this meeting&apos;s data: {loadError.message}</ErrorText>
             )}
 
             {meeting.executive_summary && (
-              <section className="rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
-                <h2 className="text-sm font-medium text-black dark:text-zinc-50">
-                  Executive summary
-                </h2>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  {meeting.executive_summary}
-                </p>
+              <section className={CARD}>
+                <h2 className="text-sm font-medium text-foreground">Executive summary</h2>
+                <p className="mt-2 text-sm text-secondary">{meeting.executive_summary}</p>
               </section>
             )}
 
             {actions && actions.length > 0 && (
-              <section className="rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
-                <h2 className="text-sm font-medium text-black dark:text-zinc-50">
-                  Suggested actions
-                </h2>
+              <section className={CARD}>
+                <h2 className="text-sm font-medium text-foreground">Suggested actions</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {actions.map((action) => (
                     <li
                       key={action.id}
-                      className="flex items-center justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-400"
+                      className="flex items-center justify-between gap-3 text-sm text-secondary"
                     >
                       <span>{action.description}</span>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          PRIORITY_CLASS[action.priority] ?? PRIORITY_CLASS.medium
-                        }`}
-                      >
+                      <Badge tone={PRIORITY_TONE[action.priority] ?? PRIORITY_TONE.medium}>
                         {action.priority}
-                      </span>
+                      </Badge>
                     </li>
                   ))}
                 </ul>
@@ -166,31 +146,23 @@ export default async function MeetingDetailPage({
             )}
 
             {notes && notes.length > 0 && (
-              <section className="rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
-                <h2 className="text-sm font-medium text-black dark:text-zinc-50">
-                  Diagnosis
-                </h2>
+              <section className={CARD}>
+                <h2 className="text-sm font-medium text-foreground">Diagnosis</h2>
                 <ul className="mt-3 flex flex-col gap-3">
                   {notes.map((note) => (
                     <li key={note.id}>
-                      <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                        {LENS_LABEL[note.lens] ?? note.lens}
-                      </span>
-                      <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-                        {note.content}
-                      </p>
+                      <Badge tone="neutral">{LENS_LABEL[note.lens] ?? note.lens}</Badge>
+                      <p className="mt-1.5 text-sm text-secondary">{note.content}</p>
                     </li>
                   ))}
                 </ul>
               </section>
             )}
 
-            <section className="rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950">
-              <h2 className="text-sm font-medium text-black dark:text-zinc-50">
-                Findings
-              </h2>
+            <section className={CARD}>
+              <h2 className="text-sm font-medium text-foreground">Findings</h2>
               {findings && findings.length === 0 && (
-                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="mt-2 text-sm text-secondary">
                   No blockers, risks, dependencies, or decisions found.
                 </p>
               )}
@@ -200,28 +172,20 @@ export default async function MeetingDetailPage({
                   if (items.length === 0) return null;
                   return (
                     <div key={type}>
-                      <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      <h3 className="text-xs font-medium uppercase tracking-wide text-secondary">
                         {FINDING_TYPE_LABEL[type]}
                       </h3>
                       <ul className="mt-2 flex flex-col gap-1.5">
                         {items.map((finding) => (
                           <li
                             key={finding.id}
-                            className="flex items-start justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-400"
+                            className="flex items-start justify-between gap-3 text-sm text-secondary"
                           >
                             <span>
                               {finding.description}
-                              {finding.owner && (
-                                <span className="text-zinc-500 dark:text-zinc-500">
-                                  {" "}
-                                  — {finding.owner}
-                                </span>
-                              )}
+                              {finding.owner && <span className="text-muted"> — {finding.owner}</span>}
                               {finding.decision_status && (
-                                <span className="text-zinc-500 dark:text-zinc-500">
-                                  {" "}
-                                  ({finding.decision_status})
-                                </span>
+                                <span className="text-muted"> ({finding.decision_status})</span>
                               )}
                             </span>
                             {type !== "decision" && (
