@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { retryMeeting } from "../actions";
+import { buttonClass } from "@/components/ui";
 
 export function RetryButton({ meetingId }: { meetingId: string }) {
   const [isPending, startTransition] = useTransition();
@@ -11,7 +12,7 @@ export function RetryButton({ meetingId }: { meetingId: string }) {
       type="button"
       disabled={isPending}
       onClick={() => startTransition(() => retryMeeting(meetingId))}
-      className="rounded bg-foreground px-3 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
+      className={buttonClass("primary")}
     >
       {isPending ? "Retrying…" : "Retry"}
     </button>

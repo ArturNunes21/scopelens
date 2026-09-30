@@ -22,8 +22,8 @@ export function FindingResolveToggle({
       }
       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
         status === "resolved"
-          ? "bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900"
-          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          ? "bg-status-good-bg text-status-good hover:opacity-80"
+          : "bg-black/[.05] text-secondary hover:bg-black/[.08] dark:bg-white/[.08] dark:hover:bg-white/[.12]"
       }`}
     >
       {isPending ? "…" : status === "resolved" ? "Resolved" : "Mark resolved"}

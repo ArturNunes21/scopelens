@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { createMeeting } from "../actions";
 import { MAX_TRANSCRIPT_CHARS } from "../transcript";
+import { buttonClass, CARD, ErrorText, FIELD_CLASS } from "@/components/ui";
 
 const MEETING_TYPES = [
   { value: "daily", label: "Daily" },
@@ -20,25 +21,17 @@ export default function NewMeetingPage() {
   const [pastedText, setPastedText] = useState("");
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
+    <div className="flex flex-1 flex-col bg-background">
       <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
-        <Link
-          href="/meetings"
-          className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
-        >
+        <Link href="/meetings" className="text-sm text-secondary hover:text-foreground">
           ← Meetings
         </Link>
 
-        <h1 className="mt-4 text-xl font-semibold text-black dark:text-zinc-50">
-          New meeting
-        </h1>
+        <h1 className="mt-4 text-xl font-semibold text-foreground">New meeting</h1>
 
-        <form
-          action={formAction}
-          className="mt-6 flex flex-col gap-4 rounded-lg border border-black/[.08] bg-white p-6 dark:border-white/[.145] dark:bg-zinc-950"
-        >
+        <form action={formAction} className={`mt-6 flex flex-col gap-4 ${CARD}`}>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="title" className="text-sm font-medium text-black dark:text-zinc-50">
+            <label htmlFor="title" className="text-sm font-medium text-foreground">
               Title
             </label>
             <input
@@ -46,13 +39,13 @@ export default function NewMeetingPage() {
               name="title"
               required
               placeholder="Sprint 12 daily standup"
-              className="rounded border border-black/[.08] bg-transparent px-3 py-2 text-sm text-black outline-none focus:border-black/30 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/30"
+              className={FIELD_CLASS}
             />
           </div>
 
           <div className="flex gap-4">
             <div className="flex flex-1 flex-col gap-1.5">
-              <label htmlFor="meeting_type" className="text-sm font-medium text-black dark:text-zinc-50">
+              <label htmlFor="meeting_type" className="text-sm font-medium text-foreground">
                 Type
               </label>
               <select
@@ -60,7 +53,7 @@ export default function NewMeetingPage() {
                 name="meeting_type"
                 required
                 defaultValue="daily"
-                className="rounded border border-black/[.08] bg-transparent px-3 py-2 text-sm text-black outline-none focus:border-black/30 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/30"
+                className={FIELD_CLASS}
               >
                 {MEETING_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -71,7 +64,7 @@ export default function NewMeetingPage() {
             </div>
 
             <div className="flex flex-1 flex-col gap-1.5">
-              <label htmlFor="occurred_at" className="text-sm font-medium text-black dark:text-zinc-50">
+              <label htmlFor="occurred_at" className="text-sm font-medium text-foreground">
                 Date
               </label>
               <input
@@ -80,24 +73,20 @@ export default function NewMeetingPage() {
                 type="date"
                 required
                 defaultValue={new Date().toISOString().slice(0, 10)}
-                className="rounded border border-black/[.08] bg-transparent px-3 py-2 text-sm text-black outline-none focus:border-black/30 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/30"
+                className={FIELD_CLASS}
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-black dark:text-zinc-50">
-                Transcript
-              </span>
-              <div className="flex gap-1 rounded-full border border-black/[.08] p-0.5 text-xs dark:border-white/[.145]">
+              <span className="text-sm font-medium text-foreground">Transcript</span>
+              <div className="flex gap-1 rounded-full border border-border p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setMode("paste")}
                   className={`rounded-full px-3 py-1 transition-colors ${
-                    mode === "paste"
-                      ? "bg-foreground text-background"
-                      : "text-zinc-600 dark:text-zinc-400"
+                    mode === "paste" ? "bg-accent text-accent-foreground" : "text-secondary"
                   }`}
                 >
                   Paste
@@ -106,9 +95,7 @@ export default function NewMeetingPage() {
                   type="button"
                   onClick={() => setMode("upload")}
                   className={`rounded-full px-3 py-1 transition-colors ${
-                    mode === "upload"
-                      ? "bg-foreground text-background"
-                      : "text-zinc-600 dark:text-zinc-400"
+                    mode === "upload" ? "bg-accent text-accent-foreground" : "text-secondary"
                   }`}
                 >
                   Upload
@@ -124,13 +111,11 @@ export default function NewMeetingPage() {
                   value={pastedText}
                   onChange={(event) => setPastedText(event.target.value)}
                   placeholder="Paste the meeting transcript here…"
-                  className="resize-y rounded border border-black/[.08] bg-transparent px-3 py-2 font-mono text-xs text-black outline-none focus:border-black/30 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/30"
+                  className={`resize-y font-mono text-xs ${FIELD_CLASS}`}
                 />
                 <p
                   className={`text-right text-xs ${
-                    pastedText.length > MAX_TRANSCRIPT_CHARS
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-zinc-500 dark:text-zinc-400"
+                    pastedText.length > MAX_TRANSCRIPT_CHARS ? "text-status-critical" : "text-secondary"
                   }`}
                 >
                   {pastedText.length.toLocaleString()} / {MAX_TRANSCRIPT_CHARS.toLocaleString()}
@@ -141,7 +126,7 @@ export default function NewMeetingPage() {
                 type="file"
                 name="transcript_file"
                 accept=".txt,.vtt,text/plain,text/vtt"
-                className="rounded border border-black/[.08] bg-transparent px-3 py-2 text-sm text-black outline-none file:mr-3 file:rounded file:border-0 file:bg-black/[.06] file:px-2 file:py-1 file:text-xs dark:border-white/[.145] dark:text-zinc-50 dark:file:bg-white/[.08]"
+                className={`file:mr-3 file:rounded file:border-0 file:bg-accent/10 file:px-2 file:py-1 file:text-xs file:text-accent ${FIELD_CLASS}`}
               />
             )}
           </div>
@@ -149,14 +134,12 @@ export default function NewMeetingPage() {
           <button
             type="submit"
             disabled={pending || pastedText.length > MAX_TRANSCRIPT_CHARS}
-            className="mt-2 rounded bg-foreground px-3 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
+            className={`mt-2 ${buttonClass("primary")}`}
           >
             {pending ? "Saving…" : "Save meeting"}
           </button>
 
-          {state.error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
-          )}
+          {state.error && <ErrorText>{state.error}</ErrorText>}
         </form>
       </div>
     </div>
