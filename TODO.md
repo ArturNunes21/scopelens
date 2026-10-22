@@ -88,7 +88,7 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 - [x] Project health score (`src/lib/health.ts`): rule-based 0-100 with every lost point listed; on the dashboard, `/projects`, and the share page.
 - [x] Public status link (`/share/[token]`): per-project read-only report, revocable, `noindex`, no transcripts.
 - [x] Sample data now lands in its own project with real short transcripts, owners, an overdue decision and a contradiction, so every Phase 9 view has something to show.
-- [ ] Apply migration `20261022000000` to remote Supabase (`npx supabase db push`) and run the integration tests (`tests/rls-isolation.test.ts`, `tests/recurrence-matching.test.ts`).
+- [x] Migration `20261022000000` applied to remote Supabase (2026-10-22); full suite 48/48 including RLS + recurrence integration tests, and the `meetings!inner(project_id)` project-filter queries probed against the real DB.
 - [ ] Manual browser pass over the new pages (not verified in a browser yet).
 
 **Deferred — would add AI cost (revisit once there's budget):**
