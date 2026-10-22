@@ -85,7 +85,7 @@ export async function runExtractionPipeline(
 
   const { data: meeting, error: fetchError } = await supabase
     .from("meetings")
-    .select("workspace_id, transcript_raw, meeting_type")
+    .select("workspace_id, project_id, transcript_raw, meeting_type")
     .eq("id", meetingId)
     .single();
 
@@ -136,7 +136,8 @@ export async function runExtractionPipeline(
           supabase,
           workspaceId,
           f.finding_type,
-          f.description
+          f.description,
+          meeting.project_id
         );
         return {
           id,
@@ -205,7 +206,8 @@ export async function runExtractionPipeline(
           workspaceId,
           mention.finding_type,
           mention.description,
-          meetingId
+          meetingId,
+          meeting.project_id
         );
         if (!match) return [];
 
@@ -236,12 +238,14 @@ export async function runExtractionPipeline(
       owner: r.owner,
     }));
 
-    // Continuity lens input: other open findings in this workspace, excluding
-    // this meeting's own (already inserted above by the time this runs).
+    // Continuity lens input: other open findings in this meeting's project
+    // (Phase 9), excluding this meeting's own (already inserted above by the
+    // time this runs). Another project's backlog isn't continuity signal.
     const { data: priorFindingsRaw, error: priorFindingsError } = await supabase
       .from("findings")
-      .select("id, finding_type, description, owner")
+      .select("id, finding_type, description, owner, meeting:meetings!inner(project_id)")
       .eq("workspace_id", workspaceId)
+      .eq("meeting.project_id", meeting.project_id)
       .eq("status", "open")
       .neq("meeting_id", meetingId)
       .order("created_at", { ascending: false })
@@ -249,7 +253,12 @@ export async function runExtractionPipeline(
     if (priorFindingsError) {
       throw new Error(`Could not load prior findings: ${priorFindingsError.message}`);
     }
-    const priorFindings: FindingForDiagnosis[] = priorFindingsRaw ?? [];
+    const priorFindings: FindingForDiagnosis[] = (priorFindingsRaw ?? []).map((f) => ({
+      id: f.id,
+      finding_type: f.finding_type,
+      description: f.description,
+      owner: f.owner,
+    }));
 
     const diagnosis = await diagnoseMeeting(meeting.transcript_raw, currentFindings, priorFindings);
 

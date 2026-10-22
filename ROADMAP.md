@@ -99,6 +99,22 @@
 
 ---
 
+## Phase 9 — Projects and decision tools (zero added AI cost)
+
+**Goal:** make the product useful for someone running more than one project, and turn analysis of past meetings into preparation for the next one — without adding a single AI token per meeting.
+
+- Projects inside a workspace; every page filterable by project (`?project=`), recurrence matching scoped per project.
+- Transcript evidence for every finding (lexical matching at render time).
+- Owner + due date on findings, with an overdue view.
+- Decision log (all decisions, revisits, contradictions).
+- Pre-meeting brief, exportable as Markdown.
+- Rule-based project health score, explained factor by factor.
+- Public read-only status link per project.
+
+**Definition of done:** a workspace with two projects never mixes their data on any page, and every new view works on the seeded sample data.
+
+---
+
 ## Out of this roadmap (post-MVP, PRD section 8.2)
 
 Multi-format source ingestion (PDF/Markdown/docs — the natural extension of the analysis engine beyond meeting transcripts, see PRD section 6), audio, Jira/Linear integration, proactive alerts — deliberately not sequenced here; they become new phases only after the MVP is validated.
