@@ -96,6 +96,17 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 - [ ] AI-extracted due dates ("by Friday") in Stage 1 — small extra output tokens per meeting; due dates are manual for now.
 - [ ] AI-cited evidence quotes (Stage 1 returns the exact quote per finding) — would replace the lexical matcher with exact citations, at extra output tokens per finding.
 
+## Phase 10 — UX/UI pass (branch `design/ux-ui-pass`)
+
+Proposed order, highest impact for someone evaluating the portfolio first — to be discussed/adjusted before building:
+
+- [ ] Public landing page at `/` (today it only redirects to `/login`): explain the product in 30 seconds, link to the sample data.
+- [ ] Sidebar navigation with the project switcher always visible (the header has 6 loose links and the current project should never be hidden).
+- [ ] Meeting detail page reorganized: summary + suggested actions on top, findings in tabs by type, transcript side by side on desktop.
+- [ ] Analysis progress state: show the 3 stages (extraction → diagnosis → synthesis) instead of a bare "Analyzing…" (takes ~30-60s).
+- [ ] Mobile responsiveness + light/dark theme toggle (recruiters open links on phones).
+- [ ] Polish: visible focus states, transitions, "saved" toasts, icons.
+
 ---
 
 Out of the roadmap for now (post-MVP, `PRD.md` section 8.2): multi-format source ingestion (PDF/Markdown/docs), audio, Jira/Linear integration, proactive alerts.
