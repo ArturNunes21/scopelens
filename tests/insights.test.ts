@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildOpenIssues, daysSince, type FindingRow } from "../src/lib/dashboard";
-import { computeHealth } from "../src/lib/health";
+import { computeHealth, summarizeProject } from "../src/lib/health";
 import { buildBrief, briefToMarkdown } from "../src/lib/brief";
 import { buildDecisionLog } from "../src/lib/decisions";
 
@@ -168,5 +168,22 @@ describe("buildDecisionLog", () => {
       contradictions: ["QA said Friday is impossible."],
     });
     expect(log[0].revisitedLater).toBe(false);
+  });
+});
+
+describe("summarizeProject", () => {
+  it("counts open issues and puts overdue, then blockers, first in the top list", () => {
+    const summary = summarizeProject(
+      [
+        finding({ finding_type: "risk", description: "old risk", meeting: { occurred_at: "2026-09-01T00:00:00Z" } }),
+        finding({ finding_type: "blocker", description: "blocker" }),
+        finding({ finding_type: "dependency", description: "late dep", due_date: "2026-10-01" }),
+        finding({ finding_type: "risk", description: "another risk" }),
+      ],
+      TODAY
+    );
+
+    expect(summary.counts).toEqual({ blocker: 1, risk: 2, dependency: 1, decision: 0, overdue: 1 });
+    expect(summary.topIssues.map((i) => i.finding.description)).toEqual(["late dep", "blocker", "old risk"]);
   });
 });

@@ -1,4 +1,4 @@
-import { buildOpenIssues, daysSince, isOverdue, type FindingRow } from "./dashboard";
+import { buildOpenIssues, daysSince, isOverdue, type FindingRow, type OpenIssue } from "./dashboard";
 
 // Phase 9 — one number answering "how is this project doing?". Deliberately
 // a transparent, rule-based score (no AI call): every point lost is listed
@@ -92,4 +92,43 @@ export function computeHealth(findings: FindingRow[], today: string): Health {
 
   const score = Math.max(0, 100 - factors.reduce((sum, f) => sum + f.penalty, 0));
   return { score, level: levelFor(score), factors };
+}
+
+// Cross-project overview (Phase 9 dashboard, "All projects" view): one card
+// per project with its health, open counts and the few issues most worth
+// someone's attention right now.
+export type ProjectSummary = {
+  health: Health;
+  counts: { blocker: number; risk: number; dependency: number; decision: number; overdue: number };
+  topIssues: OpenIssue[];
+};
+
+const TYPE_URGENCY: Record<FindingRow["finding_type"], number> = {
+  blocker: 0,
+  dependency: 1,
+  decision: 2,
+  risk: 3,
+};
+
+export const TOP_ISSUES_LIMIT = 3;
+
+export function summarizeProject(findings: FindingRow[], today: string): ProjectSummary {
+  const issues = buildOpenIssues(findings);
+  const counts = { blocker: 0, risk: 0, dependency: 0, decision: 0, overdue: 0 };
+  for (const { finding } of issues) {
+    counts[finding.finding_type] += 1;
+    if (isOverdue(finding, today)) counts.overdue += 1;
+  }
+
+  // Overdue first, then by how much the type blocks work, then oldest first
+  // (buildOpenIssues already returns oldest first, and sort is stable).
+  const topIssues = [...issues]
+    .sort(
+      (a, b) =>
+        Number(isOverdue(b.finding, today)) - Number(isOverdue(a.finding, today)) ||
+        TYPE_URGENCY[a.finding.finding_type] - TYPE_URGENCY[b.finding.finding_type]
+    )
+    .slice(0, TOP_ISSUES_LIMIT);
+
+  return { health: computeHealth(findings, today), counts, topIssues };
 }
