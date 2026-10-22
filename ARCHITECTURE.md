@@ -85,6 +85,27 @@ meetings
 
 **Transcript length limit (resolves GAPS.md G17):** uploads/pastes over 50,000 characters are rejected client- and server-side with a clear error, instead of silently truncating or blowing up token cost. This is a placeholder ceiling, not a tuned one — revisit once real transcripts are seen.
 
+### 2.2.1 Projects (Phase 9)
+
+```
+projects
+  id            uuid pk
+  workspace_id  uuid fk -> workspaces on delete cascade
+  name          text            -- 1-80 chars
+  share_token   uuid null unique -- public read-only status link; null = sharing off
+  created_at    timestamptz default now()
+  unique (id, workspace_id)
+
+meetings.project_id  uuid not null, fk (project_id, workspace_id) -> projects(id, workspace_id)
+findings.due_date    date null   -- set by hand, never by the AI pipeline
+```
+
+- A workspace holds several projects; every meeting belongs to exactly one. Findings/notes/actions are **not** denormalized with a `project_id` — they reach it through their meeting (`meetings!inner(project_id)` in PostgREST).
+- The composite FK makes "a meeting can only point at a project of its own workspace" a schema guarantee, not just an RLS one.
+- Triggers keep every workspace with at least one project (`on_workspace_created` creates "General"; `meetings_set_default_project` fills a missing `project_id` with the workspace's oldest project), so callers that predate projects keep working.
+- Recurrence and resolution matching (`match_recurrence_finding`, `match_finding_to_resolve`) take an optional `p_project_id`: the same wording in two projects is two different issues. The continuity lens only sees the meeting's own project's open findings.
+- `/share/[token]` is the only page that reads with the service-role client without a signed-in user: the token lookup is the whole authorization step, and every later query is pinned to the project it returned. It never exposes transcripts.
+
 ### 2.3 Findings (blockers, risks, dependencies, decisions)
 
 The four categories from PRD section 8.1 #2 share the same shape (description, owner, status, recurrence tracking) — a single typed table avoids four near-duplicate tables:

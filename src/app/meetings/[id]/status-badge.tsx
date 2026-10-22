@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { STATUS_LABEL, STATUS_CLASS } from "../status";
+import { STATUS_LABEL, STATUS_TONE } from "../status";
+import { Badge } from "@/components/ui";
 
 // Subscribes to this single meeting row (ARCHITECTURE.md section 3 — no
 // polling) and reacts to status changes. RLS on `meetings` still applies to
@@ -68,12 +69,8 @@ export function MeetingStatusBadge({
   }, [meetingId, router]);
 
   return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-        STATUS_CLASS[status] ?? STATUS_CLASS.pending
-      }`}
-    >
+    <Badge tone={STATUS_TONE[status] ?? STATUS_TONE.pending}>
       {STATUS_LABEL[status] ?? status}
-    </span>
+    </Badge>
   );
 }

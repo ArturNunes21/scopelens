@@ -40,7 +40,7 @@ export type RecurrenceMatch = { recurrenceGroupId: string; similarity: number } 
 async function callGroupMatchRpc(
   supabase: ReturnType<typeof createServiceRoleClient>,
   rpcName: "match_recurrence_finding" | "match_finding_to_resolve",
-  params: Record<string, string | number>
+  params: Record<string, string | number | null>
 ): Promise<RecurrenceMatch> {
   const { data, error } = await supabase.rpc(rpcName, params);
   if (error) throw new Error(`${rpcName} query failed: ${error.message}`);
@@ -48,7 +48,8 @@ async function callGroupMatchRpc(
   return row ? { recurrenceGroupId: row.recurrence_group_id, similarity: row.similarity } : null;
 }
 
-// Looks for an existing OPEN finding of the same type/workspace whose
+// Looks for an existing OPEN finding of the same type/workspace (and, when
+// projectId is given, the same project — Phase 9) whose
 // description is a reworded restatement of `description`. Must be called
 // BEFORE inserting the new finding it's matching on behalf of — see
 // pipeline.ts for why (self-referencing NOT NULL FK on recurrence_group_id).
@@ -64,13 +65,15 @@ export async function findRecurrenceMatch(
   supabase: ReturnType<typeof createServiceRoleClient>,
   workspaceId: string,
   findingType: string,
-  description: string
+  description: string,
+  projectId: string | null = null
 ): Promise<RecurrenceMatch> {
   return callGroupMatchRpc(supabase, "match_recurrence_finding", {
     p_workspace_id: workspaceId,
     p_finding_type: findingType,
     p_description: description,
     p_threshold: getRecurrenceThreshold(),
+    p_project_id: projectId,
   });
 }
 
@@ -93,7 +96,8 @@ export async function findFindingToResolve(
   workspaceId: string,
   findingType: string,
   description: string,
-  excludeMeetingId: string
+  excludeMeetingId: string,
+  projectId: string | null = null
 ): Promise<RecurrenceMatch> {
   return callGroupMatchRpc(supabase, "match_finding_to_resolve", {
     p_workspace_id: workspaceId,
@@ -101,5 +105,6 @@ export async function findFindingToResolve(
     p_description: description,
     p_threshold: getResolutionThreshold(),
     p_exclude_meeting_id: excludeMeetingId,
+    p_project_id: projectId,
   });
 }

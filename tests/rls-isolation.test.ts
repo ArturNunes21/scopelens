@@ -165,4 +165,52 @@ describe("RLS cross-tenant isolation", () => {
 
     expect(error).not.toBeNull();
   });
+
+  // Phase 9 — projects. Every workspace gets a default project from the
+  // on_workspace_created trigger.
+  it("blocks user A from listing user B's projects", async () => {
+    const { data, error } = await clientAs(userA)
+      .from("projects")
+      .select("id")
+      .eq("workspace_id", userB.workspaceId);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+  });
+
+  it("blocks user A from filing a meeting in their own workspace under user B's project", async () => {
+    const { data: projectB } = await admin
+      .from("projects")
+      .select("id")
+      .eq("workspace_id", userB.workspaceId)
+      .limit(1)
+      .single();
+    expect(projectB).not.toBeNull();
+
+    // Passes RLS (it's A's own workspace) but must fail the composite
+    // meetings(project_id, workspace_id) foreign key.
+    const { error } = await clientAs(userA).from("meetings").insert({
+      workspace_id: userA.workspaceId,
+      project_id: projectB!.id,
+      title: "Attempted cross-tenant project reference",
+      meeting_type: "daily",
+      source: "paste",
+      transcript_raw: "should be rejected",
+      occurred_at: new Date().toISOString(),
+      created_by: userA.userId,
+    });
+
+    expect(error).not.toBeNull();
+  });
+
+  it("files a meeting without a project_id under the workspace's default project", async () => {
+    const { data, error } = await admin
+      .from("meetings")
+      .select("project_id")
+      .eq("id", meetingBId)
+      .single();
+
+    expect(error).toBeNull();
+    expect(data?.project_id).toBeTruthy();
+  });
 });
