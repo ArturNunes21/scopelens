@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/login/logout-action";
+import { withProject } from "@/lib/projects";
 
 // Shared design-system primitives (ROADMAP.md Phase 8 — visual pass). Plain
 // functions/components, no client-side state, so they work from Server
@@ -68,10 +69,14 @@ export function ErrorText({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-status-critical">{children}</p>;
 }
 
+// `scoped` items are project-aware pages (Phase 9): their nav link carries
+// the current ?project= along so switching pages keeps the same filter.
 const NAV_ITEMS = [
-  { href: "/meetings", label: "Meetings" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/billing", label: "Billing" },
+  { href: "/meetings", label: "Meetings", scoped: true },
+  { href: "/dashboard", label: "Dashboard", scoped: true },
+  { href: "/decisions", label: "Decisions", scoped: true },
+  { href: "/projects", label: "Projects", scoped: false },
+  { href: "/billing", label: "Billing", scoped: false },
 ] as const;
 
 // Shared top bar for every authenticated page — title/subtitle slot on the
@@ -82,23 +87,25 @@ export function AppHeader({
   subtitle,
   active,
   actions,
+  projectId = null,
 }: {
   title: string;
   subtitle?: string;
-  active: (typeof NAV_ITEMS)[number]["href"];
+  active: (typeof NAV_ITEMS)[number]["href"] | null;
   actions?: React.ReactNode;
+  projectId?: string | null;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div>
         <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         {subtitle && <p className="mt-0.5 text-xs text-secondary">{subtitle}</p>}
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         {NAV_ITEMS.filter((item) => item.href !== active).map((item) => (
           <Link
             key={item.href}
-            href={item.href}
+            href={item.scoped ? withProject(item.href, projectId) : item.href}
             className="text-sm text-secondary hover:text-foreground"
           >
             {item.label}
