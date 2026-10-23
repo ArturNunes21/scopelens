@@ -2,8 +2,90 @@ import "./load-env";
 
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runExtractionPipeline } from "../src/lib/ai/pipeline";
+import type { Extraction } from "../src/lib/ai/extraction";
+
+// The three end-to-end tests below exercise the pipeline's WIRING (recurrence
+// grouping, resolution) — not the model's quality — so by default the 3 AI
+// stages are replaced with deterministic stubs and `npm test` costs nothing.
+// Those disposable workspaces are deleted afterwards, which cascades away
+// their ai_calls rows, so real calls here also silently bypass the monthly
+// budget guard. To hit the real API deliberately, set LIVE_AI=1 (bash: `LIVE_AI=1 npm test`; PowerShell: `$env:LIVE_AI=1; npm test`).
+const EMPTY_EXTRACTION: Extraction = {
+  blockers: [],
+  risks: [],
+  dependencies: [],
+  decisions: [],
+  resolved_mentions: [],
+};
+
+function stubExtraction(transcript: string): Extraction {
+  const text = transcript.toLowerCase();
+  if (text.includes("sandbox credentials")) {
+    return {
+      ...EMPTY_EXTRACTION,
+      blockers: [
+        {
+          description: "Payment gateway sandbox credentials have expired, blocking checkout tests",
+          owner: null,
+        },
+      ],
+    };
+  }
+  if (text.includes("staging database credentials")) {
+    return {
+      ...EMPTY_EXTRACTION,
+      resolved_mentions: [
+        {
+          finding_type: "blocker",
+          description: "Staging database credentials rotated and broke every service's connection",
+        },
+      ],
+    };
+  }
+  if (text.includes("search indexing")) {
+    return {
+      ...EMPTY_EXTRACTION,
+      resolved_mentions: [
+        {
+          finding_type: "blocker",
+          description: "Search indexing job keeps timing out on large workspaces",
+        },
+      ],
+    };
+  }
+  return EMPTY_EXTRACTION;
+}
+
+const USAGE = { tokensIn: 0, tokensOut: 0, costUsd: 0, latencyMs: 0 };
+
+vi.mock("../src/lib/ai/extraction", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/lib/ai/extraction")>();
+  if (process.env.LIVE_AI === "1") return original;
+  return {
+    ...original,
+    extractFindings: async (transcript: string) => ({ data: stubExtraction(transcript), ...USAGE }),
+  };
+});
+
+vi.mock("../src/lib/ai/diagnosis", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/lib/ai/diagnosis")>();
+  if (process.env.LIVE_AI === "1") return original;
+  return { ...original, diagnoseMeeting: async () => ({ data: { notes: [] }, ...USAGE }) };
+});
+
+vi.mock("../src/lib/ai/synthesis", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/lib/ai/synthesis")>();
+  if (process.env.LIVE_AI === "1") return original;
+  return {
+    ...original,
+    synthesizeMeeting: async () => ({
+      data: { executive_summary: "Stubbed summary.", suggested_actions: [] },
+      ...USAGE,
+    }),
+  };
+});
 
 // Phase 4 Definition of Done (ROADMAP.md): a set of synthetic meetings where
 // the "same" blocker described differently is correctly grouped, and
