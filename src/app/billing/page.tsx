@@ -1,7 +1,7 @@
 import { requireWorkspace } from "@/lib/workspace";
 import { getFreePlanMeetingLimit } from "@/lib/billing";
 import { getProjectScope } from "@/lib/projects";
-import { createCheckoutSession } from "./actions";
+import { createCheckoutSession, openBillingPortal } from "./actions";
 import { AppShell } from "@/components/app-shell";
 import { Badge, buttonClass, CARD, PageHeader, SECTION_TITLE } from "@/components/ui";
 
@@ -10,6 +10,7 @@ const STATUS_MESSAGE: Record<string, { text: string; tone: "ok" | "error" }> = {
   canceled: { text: "Checkout canceled. You're still on the free plan.", tone: "error" },
   not_configured: { text: "Billing isn't configured yet: the Stripe price is missing.", tone: "error" },
   checkout_failed: { text: "Could not start checkout. Try again.", tone: "error" },
+  portal_unavailable: { text: "Could not open subscription management. Try again in a moment.", tone: "error" },
 };
 
 export default async function BillingPage({ searchParams }: PageProps<"/billing">) {
@@ -60,6 +61,15 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
             </div>
             <Badge tone={plan === "pro" ? "good" : "neutral"}>{plan === "pro" ? "Pro" : "Free"}</Badge>
           </div>
+
+          {plan === "pro" && (
+            <form action={openBillingPortal} className="mt-6 flex flex-wrap items-center gap-3">
+              <button type="submit" className={buttonClass("secondary")}>
+                Manage subscription
+              </button>
+              <span className="text-xs text-secondary">Cancel, update your card, or see invoices.</span>
+            </form>
+          )}
 
           {plan !== "pro" && (
             <>

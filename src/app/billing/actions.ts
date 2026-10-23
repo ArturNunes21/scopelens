@@ -43,3 +43,33 @@ export async function createCheckoutSession(): Promise<void> {
   if (!session.url) redirect("/billing?error=checkout_failed");
   redirect(session.url);
 }
+
+// Stripe's hosted Customer Portal: cancel, change card, see invoices. The
+// plan itself still only changes through the webhook, so cancelling there
+// flows back here as customer.subscription.deleted/updated.
+export async function openBillingPortal(): Promise<void> {
+  const { supabase, workspaceId } = await requireWorkspace();
+
+  const { data: workspace, error } = await supabase
+    .from("workspaces")
+    .select("stripe_customer_id")
+    .eq("id", workspaceId)
+    .single();
+  if (error || !workspace?.stripe_customer_id) redirect("/billing?error=portal_unavailable");
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const stripe = getStripeClient();
+
+  let url: string;
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: workspace.stripe_customer_id,
+      return_url: `${siteUrl}/billing`,
+    });
+    url = session.url;
+  } catch {
+    // Most likely the portal isn't activated in the Stripe dashboard yet.
+    redirect("/billing?error=portal_unavailable");
+  }
+  redirect(url);
+}
