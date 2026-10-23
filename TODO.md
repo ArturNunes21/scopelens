@@ -90,6 +90,8 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 - [x] Sample data now lands in its own project with real short transcripts, owners, an overdue decision and a contradiction, so every Phase 9 view has something to show.
 - [x] Migration `20261022000000` applied to remote Supabase (2026-10-22); full suite 48/48 including RLS + recurrence integration tests, and the `meetings!inner(project_id)` project-filter queries probed against the real DB.
 - [ ] Manual browser pass over the new pages (not verified in a browser yet).
+- [x] Billing verified in production (2026-10-23): Stripe test-mode checkout upgraded the workspace to Pro via the production webhook, and the new "Manage subscription" button (Stripe Customer Portal, PR #25) cancels it back to Free. Required adding `STRIPE_PRICE_ID_PRO`, a production `STRIPE_WEBHOOK_SECRET` and a real `STRIPE_SECRET_KEY` in Vercel (the first and last were missing/empty).
+- [x] Tests no longer spend API credits (2026-10-23): the 3 pipeline tests in `tests/recurrence-matching.test.ts` use stubbed AI stages by default (`LIVE_AI=1` runs them for real). Found because those tests deleted their workspaces after calling the real API, cascading away the `ai_calls` rows, so Anthropic charged spend the monthly budget guard never saw.
 
 **Deferred — would add AI cost (revisit once there's budget):**
 - [ ] "Ask your meetings" chat (RAG over findings/transcripts with citations) — one LLM call per question; needs a per-plan question cap. The `findings.embedding` column already exists but is never populated (embeddings would also cost per finding).
@@ -108,7 +110,7 @@ Visual identity decided 2026-10-22 (black + signal orange `#FE4C02`, dark by def
 - [x] Polish: `:focus-visible` ring, icons, `icon.svg` replacing the default favicon, plain-language copy across empty/error states.
 - [x] Verified (2026-10-22): typecheck, lint, 49/49 tests, `next build`; checked in a real browser at desktop and 390px width (landing, meetings, meeting detail, progress state, dashboard, mobile menu, light theme), no horizontal scroll, no console errors.
 - [x] Feedback round 1 (2026-10-23): the lens tours every orange node by itself with a note per meeting; theme control is now one toggle button (also in the landing header); contact + bug report links (landing footer, "Report a bug" in the sidebar), all from `src/lib/site.ts`.
-- [ ] **Manual:** apply migration `20261022010000_enable_ai_calls_realtime.sql` to remote Supabase. Until then the progress view still works but only advances on the final refresh.
+- [x] Migration `20261022010000_enable_ai_calls_realtime.sql` applied to remote Supabase (2026-10-23); the 3-stage progress view advances live.
 - [ ] "Saved" toasts on inline edits (owner/due date, resolve toggles). Not done; the inline state change is the only feedback today.
 
 ---
