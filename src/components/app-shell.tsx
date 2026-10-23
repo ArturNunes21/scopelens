@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/login/logout-action";
 import { withProject } from "@/lib/projects";
+import { SITE } from "@/lib/site";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { MobileNav, ThemeToggle } from "@/components/app-shell-client";
 import { buttonClass, Wordmark } from "@/components/ui";
@@ -84,7 +85,11 @@ function SidebarContent({
           <NavIcon d="M2.5 4h11v8h-11zM2.5 7h11" />
           Plan and billing
         </Link>
-        <div className="flex items-center justify-between gap-2 px-3">
+        <a href={SITE.bugReportUrl} target="_blank" rel="noreferrer" className={navLinkClass(false)}>
+          <NavIcon d="M8 5v3.5M8 11h.01M8 1.75 14.5 13.5h-13z" />
+          Report a bug
+        </a>
+        <div className="flex items-center justify-between gap-2 pl-1">
           <ThemeToggle />
           <form action={signOut}>
             <button type="submit" className="rounded px-2 py-1 text-sm text-secondary hover:bg-surface-2 hover:text-foreground">

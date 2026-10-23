@@ -2,9 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LensGraph } from "@/components/landing/lens-graph";
 import { TranscriptDemo } from "@/components/landing/transcript-demo";
+import { ThemeToggle } from "@/components/app-shell-client";
 import { buttonClass, Wordmark } from "@/components/ui";
-
-const REPO_URL = "https://github.com/ArturNunes21/scopelens";
+import { SITE } from "@/lib/site";
 
 // Each stage and its model, as run by src/lib/ai/pipeline.ts. A real
 // sequence, so it is numbered.
@@ -62,9 +62,10 @@ export default async function Home() {
           <Wordmark />
         </Link>
         <nav aria-label="Site" className="flex items-center gap-1 text-sm">
-          <a href={REPO_URL} className="rounded px-3 py-2 text-secondary hover:text-foreground">
+          <a href={SITE.repoUrl} className="rounded px-3 py-2 text-secondary hover:text-foreground">
             Source
           </a>
+          <ThemeToggle compact />
           <Link href={user ? "/meetings" : "/login"} className="rounded px-3 py-2 text-foreground hover:bg-surface-2">
             {user ? "Open app" : "Sign in"}
           </Link>
@@ -162,7 +163,7 @@ export default async function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href={REPO_URL}
+                href={SITE.repoUrl}
                 className="inline-flex items-center rounded bg-black px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black/80 focus-visible:outline-black"
               >
                 Read the source on GitHub
@@ -178,9 +179,56 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-10 text-sm text-secondary sm:px-8">
-        <Wordmark />
-        <span>© 2026 Artur Nunes</span>
+      <footer className="border-t border-border">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-[minmax(0,1fr)_14rem_14rem]">
+          <div>
+            <Wordmark />
+            <p className="mt-3 max-w-[40ch] text-sm leading-relaxed text-secondary">
+              Built by {SITE.author}. Feedback is welcome, the critical kind most of all.
+            </p>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Contact</h2>
+            <ul className="mt-3 flex flex-col gap-2 text-sm">
+              <li>
+                <a href={`mailto:${SITE.email}`} className="break-all text-secondary hover:text-foreground">
+                  {SITE.email}
+                </a>
+              </li>
+              <li>
+                <a href={SITE.githubUrl} className="text-secondary hover:text-foreground">
+                  GitHub
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Found a problem?</h2>
+            <ul className="mt-3 flex flex-col gap-2 text-sm">
+              <li>
+                <a href={SITE.bugReportUrl} className="text-secondary hover:text-foreground">
+                  Report a bug on GitHub
+                </a>
+              </li>
+              <li>
+                <a href={SITE.bugReportMailto} className="text-secondary hover:text-foreground">
+                  Report a bug by email
+                </a>
+              </li>
+              <li>
+                <a href={SITE.ideaUrl} className="text-secondary hover:text-foreground">
+                  Suggest an improvement
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 border-t border-border px-4 py-6 text-xs text-muted sm:px-8">
+          <span>© 2026 {SITE.author}</span>
+          <a href={SITE.repoUrl} className="hover:text-foreground">
+            Source code
+          </a>
+        </div>
       </footer>
     </div>
   );

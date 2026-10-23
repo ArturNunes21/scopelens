@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 
 // The signature element (DESIGN.md): meetings drawn as columns of points
 // joined by hairlines; one issue's path through them in signal orange, with
-// a gap where it went unmentioned. A lens magnifies whatever sits under it
-// and follows the pointer, settling back on the recurring issue.
+// a gap where it went unmentioned. A lens magnifies whatever sits under it.
+// On its own it tours the orange nodes in order, telling what happened to
+// the issue in each meeting; a mouse takes over the lens until it leaves.
 
 const W = 1200;
 const H = 440;
@@ -21,9 +22,38 @@ const MEETINGS = [
 ] as const;
 // The recurring issue's position in each meeting; null = not mentioned.
 const CHAIN_Y: (number | null)[] = [null, 262, 196, 220, null, 176, 238];
-const HOME = { x: COLUMN_X[3], y: 220 };
+// What the lens says at each orange node, by column.
+const STORY: Record<number, { title: string; body: string }> = {
+  1: {
+    title: "First raised",
+    body: "Checkout can't integrate until the payments team delivers the webhook contract.",
+  },
+  2: {
+    title: "Raised again",
+    body: "Payments promised it “this week” with no date. Flagged as a risk nobody named.",
+  },
+  3: {
+    title: "Third meeting in a row",
+    body: "No change since planning. The checkout work is still waiting on it.",
+  },
+  5: {
+    title: "Back after a quiet meeting",
+    body: "Nobody mentioned it at the review, but it wasn't solved. The thread was kept.",
+  },
+  6: {
+    title: "Still open",
+    body: "Raised in 5 of 7 meetings, so it now leads the pre-meeting brief.",
+  },
+};
+const STOPS = CHAIN_Y.flatMap((y, column) =>
+  y === null ? [] : [{ column, x: COLUMN_X[column], y, ...STORY[column] }]
+);
+const START = STOPS[0];
 const LENS_R = 92;
 const ZOOM = 1.3;
+// Time the lens rests on each node, and how long it takes to travel.
+const DWELL_MS = 3200;
+const TRAVEL_MS = 1100;
 
 // Seeded PRNG so the server and client render the identical graph.
 function mulberry32(seed: number) {
@@ -148,25 +178,32 @@ function subscribeMobile(onChange: () => void) {
   return () => mq.removeEventListener("change", onChange);
 }
 
+// On a phone, frame the middle five meetings instead of shrinking all seven
+// into an unreadable strip; the tour skips nodes outside the frame.
+function framing(mobile: boolean) {
+  const vb = mobile ? { x: COLUMN_X[1] - 70, w: COLUMN_X[5] - COLUMN_X[1] + 140 } : { x: 0, w: W };
+  return { vb, stops: STOPS.filter((s) => s.x > vb.x && s.x < vb.x + vb.w) };
+}
+
 export function LensGraph() {
   // useId output may contain characters that break a url(#id) reference.
   const id = `lens${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const mobile = useSyncExternalStore(subscribeMobile, () => window.matchMedia(MOBILE_QUERY).matches, () => false);
-  // On a phone, frame the three meetings around the lens instead of
-  // shrinking all seven into an unreadable strip.
-  const vb = mobile ? { x: COLUMN_X[2] - 110, w: COLUMN_X[4] - COLUMN_X[2] + 220 } : { x: 0, w: W };
+  const { vb } = framing(mobile);
 
+  const [focus, setFocus] = useState(0);
+  const focusRef = useRef(0);
   const svgRef = useRef<SVGSVGElement>(null);
   const maskCircle = useRef<SVGCircleElement>(null);
   const clipCircle = useRef<SVGCircleElement>(null);
   const magnified = useRef<SVGGElement>(null);
   const ring = useRef<SVGGElement>(null);
   const annotation = useRef<HTMLDivElement>(null);
-  const pos = useRef({ ...HOME });
-  const target = useRef({ ...HOME });
+  const pos = useRef({ x: START.x, y: START.y });
   const frame = useRef(0);
-
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  const tourTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const paused = useRef(false);
+  const visible = useRef(true);
 
   function apply() {
     const { x, y } = pos.current;
@@ -175,34 +212,83 @@ export function LensGraph() {
       c?.setAttribute("cy", String(y));
     }
     magnified.current?.setAttribute("transform", `translate(${x} ${y}) scale(${ZOOM}) translate(${-x} ${-y})`);
-    ring.current?.setAttribute("transform", `translate(${x - HOME.x} ${y - HOME.y})`);
-    if (annotation.current) {
-      const away = Math.hypot(x - HOME.x, y - HOME.y) > 24;
-      annotation.current.style.opacity = away ? "0" : "";
+    ring.current?.setAttribute("transform", `translate(${x - START.x} ${y - START.y})`);
+    // The annotation belongs to whichever orange node the lens rests on, and
+    // hides while it travels or wanders off under the mouse.
+    const near = STOPS.findIndex((s) => Math.hypot(x - s.x, y - s.y) < 24);
+    if (near !== -1 && near !== focusRef.current) {
+      focusRef.current = near;
+      setFocus(near);
     }
+    if (annotation.current) annotation.current.style.opacity = near === -1 ? "0" : "";
   }
 
-  function moveTo(next: { x: number; y: number }) {
-    target.current = next;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Pointer: chase the target (lerp). Tour: eased tween of fixed duration.
+  function moveTo(next: { x: number; y: number }, options?: { duration: number; onArrive: () => void }) {
     cancelAnimationFrame(frame.current);
-    const step = () => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const from = { ...pos.current };
+    const startedAt = performance.now();
+    const step = (now: number) => {
       const p = pos.current;
-      const t = target.current;
-      const k = reduced ? 1 : 0.14;
-      p.x += (t.x - p.x) * k;
-      p.y += (t.y - p.y) * k;
-      if (Math.hypot(t.x - p.x, t.y - p.y) < 0.3) {
-        p.x = t.x;
-        p.y = t.y;
-        apply();
-        return;
+      let done: boolean;
+      if (options && !reduced) {
+        const t = Math.min(1, (now - startedAt) / options.duration);
+        const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+        p.x = from.x + (next.x - from.x) * eased;
+        p.y = from.y + (next.y - from.y) * eased;
+        done = t === 1;
+      } else {
+        const k = reduced ? 1 : 0.14;
+        p.x += (next.x - p.x) * k;
+        p.y += (next.y - p.y) * k;
+        done = Math.hypot(next.x - p.x, next.y - p.y) < 0.3;
+        if (done) Object.assign(p, next);
       }
       apply();
-      frame.current = requestAnimationFrame(step);
+      if (!done) frame.current = requestAnimationFrame(step);
+      else options?.onArrive();
     };
     frame.current = requestAnimationFrame(step);
   }
+
+  function scheduleTour(delay: number) {
+    clearTimeout(tourTimer.current);
+    tourTimer.current = setTimeout(() => {
+      if (paused.current || !visible.current || document.hidden) {
+        scheduleTour(1000);
+        return;
+      }
+      const list = framing(window.matchMedia(MOBILE_QUERY).matches).stops;
+      const current = list.findIndex((s) => s === STOPS[focusRef.current]);
+      const next = list[(current + 1) % list.length];
+      moveTo(next, { duration: TRAVEL_MS, onArrive: () => scheduleTour(DWELL_MS) });
+    }, delay);
+  }
+
+  useEffect(() => {
+    // Reduced motion: no tour. The lens rests on the latest state of the
+    // issue, and still follows the mouse.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const { stops } = framing(window.matchMedia(MOBILE_QUERY).matches);
+      const last = stops[stops.length - 1];
+      Object.assign(pos.current, { x: last.x, y: last.y });
+      apply();
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      visible.current = entry.isIntersecting;
+    });
+    if (svgRef.current) observer.observe(svgRef.current);
+    // First move waits for the page-load draw-in to finish (globals.css).
+    scheduleTour(2600 + DWELL_MS / 2);
+    return () => {
+      observer.disconnect();
+      clearTimeout(tourTimer.current);
+      cancelAnimationFrame(frame.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toGraph(event: React.PointerEvent) {
     const rect = svgRef.current!.getBoundingClientRect();
@@ -212,7 +298,23 @@ export function LensGraph() {
     };
   }
 
+  function takeOver(event: React.PointerEvent) {
+    paused.current = true;
+    clearTimeout(tourTimer.current);
+    moveTo(toGraph(event));
+  }
+
+  function release() {
+    paused.current = false;
+    scheduleTour(DWELL_MS / 2);
+  }
+
   const pct = (x: number) => `${((x - vb.x) / vb.w) * 100}%`;
+  const stop = STOPS[focus];
+  // Nodes in the right part of the graph get their note on the left, so it
+  // never runs off the edge.
+  const noteOnLeft = stop.x > W * 0.66;
+  const meeting = MEETINGS[stop.column];
 
   return (
     <div className="relative select-none">
@@ -222,20 +324,26 @@ export function LensGraph() {
         <svg
           ref={svgRef}
           viewBox={`${vb.x} 0 ${vb.w} ${H}`}
-          className="block h-auto w-full touch-pan-y"
+          className="block h-auto w-full touch-pan-y overflow-visible"
           role="img"
-          aria-label="Seven meetings drawn as columns of connected points. One issue, highlighted in orange, comes up in five of them and is still open. A lens magnifies it."
-          onPointerMove={(event) => event.pointerType === "mouse" && moveTo(toGraph(event))}
-          onPointerDown={(event) => event.pointerType !== "mouse" && moveTo(toGraph(event))}
-          onPointerLeave={(event) => event.pointerType === "mouse" && moveTo(HOME)}
+          aria-label="Seven meetings drawn as columns of connected points. One issue, highlighted in orange, comes up in five of them and is still open. A lens moves along it."
+          onPointerMove={(event) => event.pointerType === "mouse" && takeOver(event)}
+          onPointerLeave={(event) => event.pointerType === "mouse" && release()}
+          onPointerDown={(event) => {
+            if (event.pointerType === "mouse") return;
+            // A tap moves the lens there and holds the tour for a moment.
+            takeOver(event);
+            clearTimeout(tourTimer.current);
+            tourTimer.current = setTimeout(release, 4000);
+          }}
         >
           <defs>
             <mask id={`${id}-outside`} maskUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
               <rect width={W} height={H} fill="white" />
-              <circle ref={maskCircle} cx={HOME.x} cy={HOME.y} r={LENS_R} fill="black" />
+              <circle ref={maskCircle} cx={START.x} cy={START.y} r={LENS_R} fill="black" />
             </mask>
             <clipPath id={`${id}-inside`}>
-              <circle ref={clipCircle} cx={HOME.x} cy={HOME.y} r={LENS_R} />
+              <circle ref={clipCircle} cx={START.x} cy={START.y} r={LENS_R} />
             </clipPath>
           </defs>
 
@@ -244,17 +352,17 @@ export function LensGraph() {
           </g>
 
           <g clipPath={`url(#${id}-inside)`} className="anim-hairlines">
-            <g ref={magnified} transform={`translate(${HOME.x} ${HOME.y}) scale(${ZOOM}) translate(${-HOME.x} ${-HOME.y})`}>
+            <g ref={magnified} transform={`translate(${START.x} ${START.y}) scale(${ZOOM}) translate(${-START.x} ${-START.y})`}>
               <GraphLayer sharp />
             </g>
           </g>
 
           <g ref={ring}>
             <g className="anim-settle">
-              <circle cx={HOME.x} cy={HOME.y} r={LENS_R} fill="none" className="stroke-foreground" strokeOpacity={0.7} strokeWidth={1} />
-              <circle cx={HOME.x} cy={HOME.y} r={LENS_R + 7} fill="none" className="stroke-foreground" strokeOpacity={0.14} strokeWidth={1} />
+              <circle cx={START.x} cy={START.y} r={LENS_R} fill="none" className="stroke-foreground" strokeOpacity={0.7} strokeWidth={1} />
+              <circle cx={START.x} cy={START.y} r={LENS_R + 7} fill="none" className="stroke-foreground" strokeOpacity={0.14} strokeWidth={1} />
               <path
-                d={`M${HOME.x + LENS_R * 0.71 + 5} ${HOME.y + LENS_R * 0.71 + 5}l26 26`}
+                d={`M${START.x + LENS_R * 0.71 + 5} ${START.y + LENS_R * 0.71 + 5}l26 26`}
                 className="stroke-foreground"
                 strokeOpacity={0.7}
                 strokeWidth={1.5}
@@ -282,18 +390,42 @@ export function LensGraph() {
         </ol>
       </div>
 
+      {/* The full story for screen readers; the visual note below only
+          shows the node the lens is on. */}
+      <ol className="sr-only">
+        {STOPS.map((s) => (
+          <li key={s.column}>
+            {MEETINGS[s.column].join(", ")}: {s.title}. {s.body}
+          </li>
+        ))}
+      </ol>
+
       {/* Outer div fades with the lens position; the inner one carries the
           entrance animation (an animation would override inline opacity). */}
       <div
         ref={annotation}
-        className="pointer-events-none mt-12 transition-opacity duration-300 sm:absolute sm:mt-0 sm:w-64"
-        style={mobile ? undefined : { left: pct(HOME.x + LENS_R + 44), top: `${((HOME.y + 18) / H) * 100}%` }}
+        aria-hidden
+        className={`pointer-events-none mt-12 transition-opacity duration-300 sm:absolute sm:mt-0 sm:w-64 ${
+          noteOnLeft ? "sm:text-right" : ""
+        }`}
+        style={
+          mobile
+            ? undefined
+            : {
+                top: `${((stop.y - 34) / H) * 100}%`,
+                ...(noteOnLeft
+                  ? { right: `${((vb.x + vb.w - (stop.x - LENS_R - 36)) / vb.w) * 100}%` }
+                  : { left: pct(stop.x + LENS_R + 36) }),
+              }
+        }
       >
-        <div className="anim-rise">
-          <p className="text-sm font-medium text-foreground">Checkout blocked on the payments webhook</p>
-          <p className="mt-0.5 text-xs text-secondary">
-            Raised in 5 of 7 meetings. <span className="text-accent-ink">Still open.</span>
+        {/* A soft backing so the note stays legible over the hairlines. */}
+        <div className="anim-rise sm:-m-2 sm:rounded sm:bg-background/85 sm:p-2">
+          <p className="text-xs tabular-nums text-muted">
+            {meeting[0]}, {meeting[1]}
           </p>
+          <p className="mt-0.5 text-sm font-medium text-foreground">{stop.title}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-secondary">{stop.body}</p>
         </div>
       </div>
     </div>

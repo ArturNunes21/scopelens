@@ -11,7 +11,7 @@
 
 ## Palette
 
-Dark is the default theme; light is a full theme, not an inverted filter. Toggle stored per browser (`localStorage.theme`), applied as `data-theme` on `<html>` before paint.
+Dark is the default theme; light is a full theme, not an inverted filter. One toggle button (sidebar and landing header) that names the theme it switches to; stored per browser (`localStorage.theme`), applied as `data-theme` on `<html>` before paint.
 
 | Token | Dark | Light | Use |
 |---|---|---|---|
@@ -53,7 +53,7 @@ Dark is the default theme; light is a full theme, not an inverted filter. Toggle
 
 ## Signature element — the lens graph
 
-Meetings drawn as columns of points joined by hairlines; one issue's path through them is drawn in signal orange, with a gap where it went unmentioned. A lens (circle) magnifies the graph under it — inside the lens the hairlines sharpen. On the landing it follows the pointer and settles back on the recurring issue. It is the product's actual idea (cross-meeting recurrence) drawn literally, so it is reused only where that idea appears: the landing hero, the logo mark (ring + offset orange node), and the analysis-in-progress state.
+Meetings drawn as columns of points joined by hairlines; one issue's path through them is drawn in signal orange, with a gap where it went unmentioned. A lens (circle) magnifies the graph under it — inside the lens the hairlines sharpen. On the landing it tours the orange nodes in order on its own, with a note for each meeting (first raised, raised again, back after a quiet meeting, still open); a mouse takes over the lens until it leaves, and the tour pauses while off-screen. Under reduced motion it rests on the last node. It is the product's actual idea (cross-meeting recurrence) drawn literally, so it is reused only where that idea appears: the landing hero, the logo mark (ring + offset orange node), and the analysis-in-progress state.
 
 ## Motion
 

@@ -108,34 +108,36 @@ export function setTheme(theme: Theme) {
   }
 }
 
-export function ThemeToggle() {
+const SUN = "M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1";
+const MOON = "M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5Z";
+
+// One button that flips the theme on every click; it names (and shows the
+// icon of) the theme it switches TO. `compact` drops the text label.
+export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as Theme);
+  const next: Theme = theme === "dark" ? "light" : "dark";
+  const label = next === "light" ? "Light theme" : "Dark theme";
 
   return (
-    <div role="group" aria-label="Theme" className="flex rounded border border-border p-0.5">
-      {(["dark", "light"] as const).map((option) => (
-        <button
-          key={option}
-          type="button"
-          aria-pressed={theme === option}
-          onClick={() => setTheme(option)}
-          className={`flex size-7 items-center justify-center rounded-sm transition-colors ${
-            theme === option ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"
-          }`}
-        >
-          <span className="sr-only">{option === "dark" ? "Dark theme" : "Light theme"}</span>
-          {option === "dark" ? (
-            <svg aria-hidden viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <path d="M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5Z" />
-            </svg>
-          ) : (
-            <svg aria-hidden viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-              <circle cx="8" cy="8" r="3" />
-              <path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1" />
-            </svg>
-          )}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={() => setTheme(next)}
+      title={`Switch to ${label.toLowerCase()}`}
+      className={`flex items-center gap-2 rounded text-sm text-secondary transition-colors hover:bg-surface-2 hover:text-foreground ${
+        compact ? "size-9 justify-center" : "px-2 py-1"
+      }`}
+    >
+      <svg aria-hidden viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+        {next === "light" ? (
+          <>
+            <circle cx="8" cy="8" r="3" />
+            <path d={SUN} />
+          </>
+        ) : (
+          <path d={MOON} />
+        )}
+      </svg>
+      <span className={compact ? "sr-only" : ""}>{compact ? `Switch to ${label.toLowerCase()}` : label}</span>
+    </button>
   );
 }

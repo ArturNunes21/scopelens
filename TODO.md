@@ -107,6 +107,7 @@ Visual identity decided 2026-10-22 (black + signal orange `#FE4C02`, dark by def
 - [x] Mobile responsiveness + light/dark theme toggle (`data-theme` set before paint, stored in `localStorage`).
 - [x] Polish: `:focus-visible` ring, icons, `icon.svg` replacing the default favicon, plain-language copy across empty/error states.
 - [x] Verified (2026-10-22): typecheck, lint, 49/49 tests, `next build`; checked in a real browser at desktop and 390px width (landing, meetings, meeting detail, progress state, dashboard, mobile menu, light theme), no horizontal scroll, no console errors.
+- [x] Feedback round 1 (2026-10-23): the lens tours every orange node by itself with a note per meeting; theme control is now one toggle button (also in the landing header); contact + bug report links (landing footer, "Report a bug" in the sidebar), all from `src/lib/site.ts`.
 - [ ] **Manual:** apply migration `20261022010000_enable_ai_calls_realtime.sql` to remote Supabase. Until then the progress view still works but only advances on the final refresh.
 - [ ] "Saved" toasts on inline edits (owner/due date, resolve toggles). Not done; the inline state change is the only feedback today.
 
