@@ -1,15 +1,17 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/workspace";
 import { MeetingStatusBadge } from "./status-badge";
 import { RetryButton } from "./retry-button";
+import { AnalysisProgress } from "./analysis-progress";
 import { FindingResolveToggle } from "./finding-resolve-toggle";
 import { FindingAssignment } from "./finding-assignment";
 import { DecisionStatusToggle } from "@/components/decision-status-toggle";
-import { Badge, CARD, CARD_CENTERED, ErrorText } from "@/components/ui";
-import { findEvidence, splitTranscript, type Evidence } from "@/lib/evidence";
+import { AppShell } from "@/components/app-shell";
+import { Tabs } from "@/components/tabs";
+import { Badge, ErrorText, Meta, PageHeader, SECTION_TITLE } from "@/components/ui";
+import { findEvidence, splitSpeaker, splitTranscript, type Evidence } from "@/lib/evidence";
 import { todayUtc } from "@/lib/dashboard";
-import { withProject } from "@/lib/projects";
+import { getProjectScope, withProject } from "@/lib/projects";
 
 // Extends the Server Action timeout for `retryMeeting`'s 3 chained AI calls
 // (GAPS.md G15). See ARCHITECTURE.md section 3.
@@ -22,12 +24,30 @@ const FINDING_TYPE_LABEL: Record<string, string> = {
   decision: "Decisions",
 };
 
+const FINDING_TYPE_EMPTY: Record<string, string> = {
+  blocker: "Nothing in this meeting is stopping work.",
+  risk: "No risks raised in this meeting.",
+  dependency: "No dependencies on other teams or vendors.",
+  decision: "No decisions made or pending in this meeting.",
+};
+
 const FINDING_TYPE_ORDER = ["blocker", "risk", "dependency", "decision"] as const;
 
-const LENS_LABEL: Record<string, string> = {
-  contradiction: "Contradiction",
-  continuity: "Continuity",
-  decision_gap: "Decision gap",
+// Each lens is a different question asked of the same transcript
+// (src/lib/ai/diagnosis.ts) — the explanation is shown with the answer.
+const LENS: Record<string, { label: string; question: string }> = {
+  contradiction: {
+    label: "Contradiction",
+    question: "Did people describe the same thing in incompatible ways?",
+  },
+  continuity: {
+    label: "Continuity",
+    question: "Does this connect to something still open from earlier meetings?",
+  },
+  decision_gap: {
+    label: "Decision gap",
+    question: "What should have been decided here, but wasn't?",
+  },
 };
 
 const PRIORITY_TONE: Record<string, "critical" | "accent" | "neutral"> = {
@@ -55,11 +75,16 @@ export default async function MeetingDetailPage({
 
   if (error || !meeting) notFound();
 
+  const inProgress = meeting.status === "pending" || meeting.status === "processing";
+
   const [
+    { projects },
     { data: findings, error: findingsError },
     { data: notes, error: notesError },
     { data: actions, error: actionsError },
+    { data: stageRows },
   ] = await Promise.all([
+    getProjectScope(supabase, workspaceId, null),
     supabase
       .from("findings")
       .select("id, finding_type, description, owner, decision_status, status, due_date")
@@ -75,10 +100,13 @@ export default async function MeetingDetailPage({
       .select("id, description, priority")
       .eq("meeting_id", id)
       .order("created_at", { ascending: true }),
+    inProgress
+      ? supabase.from("ai_calls").select("stage").eq("meeting_id", id)
+      : Promise.resolve({ data: [] as { stage: string }[] }),
   ]);
   const loadError = findingsError ?? notesError ?? actionsError;
 
-  const findingsByType = new Map<string, typeof findings>();
+  const findingsByType = new Map<string, NonNullable<typeof findings>>();
   for (const type of FINDING_TYPE_ORDER) findingsByType.set(type, []);
   for (const finding of findings ?? []) {
     findingsByType.get(finding.finding_type)?.push(finding);
@@ -100,186 +128,234 @@ export default async function MeetingDetailPage({
   const project = Array.isArray(meeting.project) ? meeting.project[0] : meeting.project;
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-        <Link
-          href={withProject("/meetings", meeting.project_id)}
-          className="text-sm text-secondary hover:text-foreground"
-        >
-          ← {project?.name ?? "Meetings"}
-        </Link>
+    <AppShell active="/meetings" projects={projects} projectId={meeting.project_id} wide>
+      <PageHeader
+        back={{ href: withProject("/meetings", meeting.project_id), label: project?.name ?? "Meetings" }}
+        title={meeting.title}
+        aside={<MeetingStatusBadge meetingId={meeting.id} initialStatus={meeting.status} />}
+        subtitle={
+          <Meta className="text-sm">
+            <span className="capitalize">{meeting.meeting_type}</span>
+            <time dateTime={meeting.occurred_at}>
+              {new Date(meeting.occurred_at).toLocaleDateString(undefined, {
+                weekday: "short",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </time>
+          </Meta>
+        }
+      />
 
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">{meeting.title}</h1>
-            <p className="mt-0.5 text-xs text-secondary">
-              {meeting.meeting_type} · {new Date(meeting.occurred_at).toLocaleDateString()}
-            </p>
+      {inProgress && (
+        <AnalysisProgress
+          meetingId={meeting.id}
+          initialDone={(stageRows ?? []).map((row) => row.stage)}
+        />
+      )}
+
+      {meeting.status === "failed" && (
+        <section className="max-w-2xl rounded-lg border border-accent/40 bg-status-serious-bg p-5">
+          <h2 className={SECTION_TITLE}>The analysis didn&apos;t finish</h2>
+          <p className="mt-1.5 text-sm text-secondary">
+            {meeting.error_message ?? "One of the analysis steps failed."} Your transcript is saved, so
+            you can run it again.
+          </p>
+          <div className="mt-4">
+            <RetryButton meetingId={meeting.id} />
           </div>
-          <MeetingStatusBadge meetingId={meeting.id} initialStatus={meeting.status} />
-        </div>
+        </section>
+      )}
 
-        {(meeting.status === "pending" || meeting.status === "processing") && (
-          <div className={`mt-8 ${CARD_CENTERED}`}>
-            <p className="text-sm text-secondary">
-              Analyzing this meeting — this updates automatically, no need to refresh.
-            </p>
-          </div>
-        )}
-
-        {meeting.status === "failed" && (
-          <div className={`mt-8 ${CARD}`}>
-            <ErrorText>{meeting.error_message ?? "Analysis failed."}</ErrorText>
-            <div className="mt-4">
-              <RetryButton meetingId={meeting.id} />
-            </div>
-          </div>
-        )}
-
-        {meeting.status === "completed" && (
-          <div className="mt-8 flex flex-col gap-6">
+      {meeting.status === "completed" && (
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]">
+          <div className="flex min-w-0 flex-col gap-12">
             {loadError && (
               <ErrorText>Could not load some of this meeting&apos;s data: {loadError.message}</ErrorText>
             )}
 
             {meeting.executive_summary && (
-              <section className={CARD}>
-                <h2 className="text-sm font-medium text-foreground">Executive summary</h2>
-                <p className="mt-2 text-sm text-secondary">{meeting.executive_summary}</p>
+              <section aria-labelledby="summary-title">
+                <h2 id="summary-title" className="sr-only">
+                  Summary
+                </h2>
+                <p className="max-w-[62ch] text-lg leading-relaxed text-foreground">
+                  {meeting.executive_summary}
+                </p>
               </section>
             )}
 
             {actions && actions.length > 0 && (
-              <section className={CARD}>
-                <h2 className="text-sm font-medium text-foreground">Suggested actions</h2>
-                <ul className="mt-3 flex flex-col gap-2">
-                  {actions.map((action) => (
+              <section aria-labelledby="actions-title">
+                <h2 id="actions-title" className={SECTION_TITLE}>
+                  Suggested actions
+                </h2>
+                <ol className="mt-3 border-t border-border">
+                  {actions.map((action, index) => (
                     <li
                       key={action.id}
-                      className="flex items-center justify-between gap-3 text-sm text-secondary"
+                      className="flex items-start gap-4 border-b border-border py-3 text-sm"
                     >
-                      <span>{action.description}</span>
+                      <span className="w-4 shrink-0 pt-px text-xs tabular-nums text-muted">{index + 1}</span>
+                      <span className="flex-1 text-foreground">{action.description}</span>
                       <Badge tone={PRIORITY_TONE[action.priority] ?? PRIORITY_TONE.medium}>
-                        {action.priority}
+                        <span className="capitalize">{action.priority}</span>
                       </Badge>
                     </li>
                   ))}
-                </ul>
+                </ol>
               </section>
             )}
 
-            {notes && notes.length > 0 && (
-              <section className={CARD}>
-                <h2 className="text-sm font-medium text-foreground">Diagnosis</h2>
-                <ul className="mt-3 flex flex-col gap-3">
-                  {notes.map((note) => (
-                    <li key={note.id}>
-                      <Badge tone="neutral">{LENS_LABEL[note.lens] ?? note.lens}</Badge>
-                      <p className="mt-1.5 text-sm text-secondary">{note.content}</p>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            <section className={CARD}>
-              <h2 className="text-sm font-medium text-foreground">Findings</h2>
-              {findings && findings.length === 0 && (
-                <p className="mt-2 text-sm text-secondary">
-                  No blockers, risks, dependencies, or decisions found.
-                </p>
-              )}
-              <div className="mt-3 flex flex-col gap-4">
-                {FINDING_TYPE_ORDER.map((type) => {
-                  const items = findingsByType.get(type) ?? [];
-                  if (items.length === 0) return null;
-                  return (
-                    <div key={type}>
-                      <h3 className="text-xs font-medium uppercase tracking-wide text-secondary">
-                        {FINDING_TYPE_LABEL[type]}
-                      </h3>
-                      <ul className="mt-2 flex flex-col gap-2">
-                        {items.map((finding) => {
-                          const evidence = evidenceById.get(finding.id);
-                          return (
-                            <li
-                              key={finding.id}
-                              className="rounded border border-border px-3 py-2.5"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <span className="text-sm text-foreground">{finding.description}</span>
-                                {type === "decision" ? (
-                                  <DecisionStatusToggle
-                                    findingId={finding.id}
-                                    status={finding.decision_status === "taken" ? "taken" : "pending"}
-                                  />
-                                ) : (
-                                  <FindingResolveToggle
-                                    findingId={finding.id}
-                                    status={finding.status as "open" | "resolved"}
-                                  />
-                                )}
-                              </div>
-                              <div className="mt-1.5">
-                                <FindingAssignment
-                                  findingId={finding.id}
-                                  owner={finding.owner}
-                                  dueDate={finding.due_date}
-                                  overdue={
-                                    Boolean(finding.due_date && finding.due_date < today) &&
-                                    (type === "decision"
-                                      ? finding.decision_status === "pending"
-                                      : finding.status === "open")
-                                  }
-                                />
-                              </div>
-                              {evidence && (
-                                <details className="mt-1.5 text-xs">
-                                  <summary className="cursor-pointer text-secondary hover:text-foreground">
-                                    Evidence from transcript
-                                  </summary>
-                                  <blockquote className="mt-1.5 border-l-2 border-accent pl-3 text-secondary">
-                                    {evidence.text}
-                                  </blockquote>
-                                </details>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  );
-                })}
+            <section aria-labelledby="findings-title">
+              <h2 id="findings-title" className={SECTION_TITLE}>
+                Findings
+              </h2>
+              <div className="mt-3">
+                <Tabs
+                  label="Findings by type"
+                  tabs={FINDING_TYPE_ORDER.map((type) => {
+                    const items = findingsByType.get(type) ?? [];
+                    return {
+                      key: type,
+                      label: FINDING_TYPE_LABEL[type],
+                      count: items.length,
+                      content:
+                        items.length === 0 ? (
+                          <p className="py-6 text-sm text-secondary">{FINDING_TYPE_EMPTY[type]}</p>
+                        ) : (
+                          <ul>
+                            {items.map((finding) => {
+                              const evidence = evidenceById.get(finding.id);
+                              const firstLine = evidence ? evidence.lineIndexes[0] + 1 : null;
+                              return (
+                                <li key={finding.id} className="border-b border-border py-4 last:border-b-0">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <p className="text-[0.95rem] leading-snug text-foreground">
+                                      {finding.description}
+                                    </p>
+                                    {type === "decision" ? (
+                                      <DecisionStatusToggle
+                                        findingId={finding.id}
+                                        status={finding.decision_status === "taken" ? "taken" : "pending"}
+                                      />
+                                    ) : (
+                                      <FindingResolveToggle
+                                        findingId={finding.id}
+                                        status={finding.status as "open" | "resolved"}
+                                      />
+                                    )}
+                                  </div>
+                                  {evidence && (
+                                    <figure className="mt-3 flex gap-3">
+                                      <a
+                                        href={`#line-${firstLine}`}
+                                        className="shrink-0 pt-0.5 text-xs tabular-nums text-accent-ink hover:underline"
+                                        aria-label={`Go to transcript line ${firstLine}`}
+                                      >
+                                        L{firstLine}
+                                      </a>
+                                      <blockquote className="border-l border-border pl-3 font-serif text-[0.95rem] leading-relaxed text-secondary">
+                                        {evidence.text}
+                                      </blockquote>
+                                    </figure>
+                                  )}
+                                  <div className="mt-3">
+                                    <FindingAssignment
+                                      findingId={finding.id}
+                                      owner={finding.owner}
+                                      dueDate={finding.due_date}
+                                      overdue={
+                                        Boolean(finding.due_date && finding.due_date < today) &&
+                                        (type === "decision"
+                                          ? finding.decision_status === "pending"
+                                          : finding.status === "open")
+                                      }
+                                    />
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ),
+                    };
+                  })}
+                />
               </div>
             </section>
 
-            <section className={CARD}>
-              <details>
-                <summary className="cursor-pointer text-sm font-medium text-foreground">
+            {notes && notes.length > 0 && (
+              <section aria-labelledby="diagnosis-title">
+                <h2 id="diagnosis-title" className={SECTION_TITLE}>
+                  Diagnosis
+                </h2>
+                <p className="mt-1 text-sm text-secondary">
+                  The same transcript read three ways, to surface what nobody said out loud.
+                </p>
+                <dl className="mt-4 border-t border-border">
+                  {notes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="grid gap-x-6 gap-y-1 border-b border-border py-4 sm:grid-cols-[11rem_1fr]"
+                    >
+                      <dt>
+                        <span className="text-sm font-medium text-foreground">
+                          {LENS[note.lens]?.label ?? note.lens}
+                        </span>
+                        {LENS[note.lens] && (
+                          <span className="mt-0.5 block text-xs leading-snug text-muted">
+                            {LENS[note.lens].question}
+                          </span>
+                        )}
+                      </dt>
+                      <dd className="text-sm leading-relaxed text-secondary">{note.content}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+          </div>
+
+          <aside aria-labelledby="transcript-title" className="min-w-0">
+            <div className="rounded-lg border border-border bg-surface lg:sticky lg:top-8 lg:flex lg:max-h-[calc(100dvh-4rem)] lg:flex-col">
+              <div className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+                <h2 id="transcript-title" className={SECTION_TITLE}>
                   Transcript
-                  <span className="ml-2 text-xs font-normal text-muted">
-                    {evidenceLines.size > 0
-                      ? "highlighted lines are cited as evidence above"
-                      : `${segments.length} lines`}
-                  </span>
-                </summary>
-                <ol className="mt-3 flex flex-col gap-1 font-mono text-xs">
-                  {segments.map((line, index) => (
+                </h2>
+                <span className="text-xs text-muted">
+                  {evidenceLines.size > 0
+                    ? `${evidenceLines.size} of ${segments.length} lines cited`
+                    : `${segments.length} lines`}
+                </span>
+              </div>
+              <ol className="flex flex-col gap-0.5 p-2 lg:overflow-y-auto">
+                {segments.map((line, index) => {
+                  const { speaker, text } = splitSpeaker(line);
+                  const cited = evidenceLines.has(index);
+                  return (
                     <li
                       key={index}
-                      className={`rounded px-2 py-1 ${
-                        evidenceLines.has(index) ? "bg-accent/10 text-foreground" : "text-secondary"
+                      id={`line-${index + 1}`}
+                      className={`transcript-line grid scroll-mt-20 grid-cols-[1.75rem_1fr] gap-1 rounded px-2 py-2 ${
+                        cited ? "shadow-[inset_2px_0_0_var(--accent)]" : ""
                       }`}
                     >
-                      {line}
+                      <span className="pt-0.5 text-[0.7rem] tabular-nums text-muted">{index + 1}</span>
+                      <p className={`font-serif text-[0.95rem] leading-relaxed ${cited ? "text-foreground" : "text-secondary"}`}>
+                        {speaker && (
+                          <span className="block font-sans text-xs font-medium text-muted">{speaker}</span>
+                        )}
+                        {text}
+                      </p>
                     </li>
-                  ))}
-                </ol>
-              </details>
-            </section>
-          </div>
-        )}
-      </div>
-    </div>
+                  );
+                })}
+              </ol>
+            </div>
+          </aside>
+        </div>
+      )}
+    </AppShell>
   );
 }

@@ -21,13 +21,13 @@ export function DecisionStatusToggle({
       disabled={isPending}
       title={status === "taken" ? "Mark as still pending" : "Mark as decided"}
       onClick={() => startTransition(() => setDecisionStatus(findingId, nextStatus))}
-      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+      className={`shrink-0 rounded px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors disabled:opacity-50 ${
         status === "taken"
           ? "bg-status-good-bg text-status-good hover:opacity-80"
-          : "bg-status-warning-bg text-[#8a5a00] hover:opacity-80 dark:text-status-warning"
+          : "bg-status-warning-bg text-status-warning hover:opacity-80"
       }`}
     >
-      {isPending ? "…" : status === "taken" ? "Decided" : "Pending — mark decided"}
+      {isPending ? "…" : status === "taken" ? "Decided" : "Pending, mark decided"}
     </button>
   );
 }

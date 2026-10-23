@@ -28,18 +28,24 @@ export function FindingAssignment({
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
         <span className={owner ? "text-secondary" : "text-muted"}>
-          {owner ? `Owner: ${owner}` : "No owner"}
+          {owner ? (
+            <>
+              <span className="text-muted">Owner</span> {owner}
+            </>
+          ) : (
+            "No owner"
+          )}
         </span>
         {dueDate && (
           <span className={overdue ? "font-medium text-status-critical" : "text-secondary"}>
-            {overdue ? "Overdue · " : "Due "}
+            {overdue ? "Overdue since " : "Due "}
             {dueDate}
           </span>
         )}
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="text-accent hover:underline"
+          className="text-accent-ink hover:underline"
         >
           {owner || dueDate ? "Edit" : "Assign"}
         </button>

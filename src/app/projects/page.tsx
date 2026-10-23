@@ -5,7 +5,8 @@ import { fetchScopedFindings } from "@/lib/findings-query";
 import { meetingOf, todayUtc, type FindingRow } from "@/lib/dashboard";
 import { computeHealth, HEALTH_LABEL, HEALTH_TONE } from "@/lib/health";
 import { CreateProjectForm, DeleteProject, RenameProject, ShareControls } from "./project-controls";
-import { AppHeader, Badge, CARD, CARD_COMPACT, ErrorText } from "@/components/ui";
+import { AppShell } from "@/components/app-shell";
+import { Badge, ErrorText, LINK_CLASS, PageHeader } from "@/components/ui";
 
 // Phase 9 — projects inside a workspace: create/rename/delete, per-project
 // health at a glance, and the public status-report link.
@@ -38,72 +39,68 @@ export default async function ProjectsPage() {
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-        <AppHeader
-          title="Projects"
-          subtitle="Keep each project's meetings, trends, and decisions separate"
-          active="/projects"
-        />
+    <AppShell active="/projects" projects={projects} projectId={null}>
+      <PageHeader
+        title="Projects"
+        subtitle="Each project keeps its own meetings, trends and decisions, and can have a public status link."
+      />
 
-        <section className={`mt-8 ${CARD}`}>
-          <CreateProjectForm />
-        </section>
+      <section aria-label="Create a project" className="mb-8">
+        <CreateProjectForm />
+      </section>
 
-        {error && <ErrorText>Could not load projects: {error.message}</ErrorText>}
+      {error && <ErrorText>Could not load projects: {error.message}</ErrorText>}
 
-        <ul className="mt-6 flex flex-col gap-3">
-          {projects.map((project) => {
-            const count = meetingCount.get(project.id) ?? 0;
-            const health = computeHealth(findingsByProject.get(project.id) ?? [], today);
-            const canDelete = count === 0 && projects.length > 1;
-            return (
-              <li key={project.id} className={CARD_COMPACT}>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <Link
-                      href={`/dashboard?project=${project.id}`}
-                      className="text-sm font-medium text-foreground hover:underline"
-                    >
-                      {project.name}
-                    </Link>
-                    <p className="mt-0.5 text-xs text-secondary">
-                      {count} {count === 1 ? "meeting" : "meetings"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold tabular-nums text-foreground">
-                      {health.score}
-                    </span>
-                    <Badge tone={HEALTH_TONE[health.level]}>{HEALTH_LABEL[health.level]}</Badge>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
-                  <Link href={`/meetings?project=${project.id}`} className="text-accent hover:underline">
-                    Meetings
+      <ul className="border-t border-border">
+        {projects.map((project) => {
+          const count = meetingCount.get(project.id) ?? 0;
+          const health = computeHealth(findingsByProject.get(project.id) ?? [], today);
+          const canDelete = count === 0 && projects.length > 1;
+          return (
+            <li key={project.id} className="border-b border-border py-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <Link
+                    href={`/dashboard?project=${project.id}`}
+                    className="text-[0.95rem] font-medium text-foreground hover:underline"
+                  >
+                    {project.name}
                   </Link>
-                  <Link href={`/brief?project=${project.id}`} className="text-accent hover:underline">
-                    Pre-meeting brief
-                  </Link>
-                  <Link href={`/decisions?project=${project.id}`} className="text-accent hover:underline">
-                    Decisions
-                  </Link>
-                  <RenameProject projectId={project.id} name={project.name} />
-                  {canDelete && <DeleteProject projectId={project.id} />}
+                  <p className="mt-0.5 text-xs tabular-nums text-secondary">
+                    {count} {count === 1 ? "meeting" : "meetings"}
+                  </p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold tabular-nums text-foreground">{health.score}</span>
+                  <Badge tone={HEALTH_TONE[health.level]}>{HEALTH_LABEL[health.level]}</Badge>
+                </div>
+              </div>
 
-                <div className="mt-3 border-t border-border pt-3">
-                  <ShareControls
-                    projectId={project.id}
-                    shareUrl={project.share_token ? `${siteUrl}/share/${project.share_token}` : null}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                <Link href={`/meetings?project=${project.id}`} className={LINK_CLASS}>
+                  Meetings
+                </Link>
+                <Link href={`/brief?project=${project.id}`} className={LINK_CLASS}>
+                  Pre-meeting brief
+                </Link>
+                <Link href={`/decisions?project=${project.id}`} className={LINK_CLASS}>
+                  Decisions
+                </Link>
+                <span aria-hidden className="h-3 w-px bg-border" />
+                <RenameProject projectId={project.id} name={project.name} />
+                {canDelete && <DeleteProject projectId={project.id} />}
+              </div>
+
+              <div className="mt-4">
+                <ShareControls
+                  projectId={project.id}
+                  shareUrl={project.share_token ? `${siteUrl}/share/${project.share_token}` : null}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </AppShell>
   );
 }

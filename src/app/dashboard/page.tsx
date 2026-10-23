@@ -14,9 +14,18 @@ import { fetchScopedFindings, FINDINGS_QUERY_CAP } from "@/lib/findings-query";
 import { computeHealth, summarizeProject, HEALTH_LABEL, HEALTH_TONE } from "@/lib/health";
 import { getProjectScope, projectParam, withProject } from "@/lib/projects";
 import { TrendChart } from "./trend-chart";
-import { ProjectSwitcher } from "@/components/project-switcher";
+import { AppShell } from "@/components/app-shell";
 import { HealthCard } from "@/components/health-card";
-import { AppHeader, Badge, buttonClass, CARD, CARD_COMPACT, EmptyState, ErrorText } from "@/components/ui";
+import {
+  Badge,
+  buttonClass,
+  CARD,
+  CARD_COMPACT,
+  EmptyState,
+  ErrorText,
+  PageHeader,
+  SECTION_TITLE,
+} from "@/components/ui";
 
 const ISSUE_TYPE_LABEL: Record<string, string> = {
   blocker: "Blocker",
@@ -29,6 +38,7 @@ const FINDING_TYPE_LABEL: Record<string, string> = {
   blocker: "Open blockers",
   risk: "Open risks",
   dependency: "Open dependencies",
+  decision: "Pending decisions",
 };
 
 export default async function DashboardPage({
@@ -70,185 +80,142 @@ export default async function DashboardPage({
         .map((p) => ({ project: p, summary: summarizeProject(findingsByProject.get(p.id) ?? [], today) }))
         .sort((a, b) => a.summary.health.score - b.summary.health.score);
 
-  return (
-    <div className="flex flex-1 flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-        <AppHeader
-          title="Dashboard"
-          subtitle={
-            project
-              ? `Open vs. resolved across every meeting in ${project.name}`
-              : "Open vs. resolved across every project in this workspace"
-          }
-          active="/dashboard"
-          projectId={projectId}
-        />
+  const tiles = [
+    ["blocker", openCounts.blocker],
+    ["risk", openCounts.risk],
+    ["dependency", openCounts.dependency],
+    ["decision", pendingDecisions],
+  ] as const;
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <ProjectSwitcher projects={projects} projectId={projectId} />
+  return (
+    <AppShell active="/dashboard" projects={projects} projectId={projectId}>
+      <PageHeader
+        title={project ? project.name : "All projects"}
+        subtitle={
+          project
+            ? "Open versus resolved across every meeting in this project."
+            : "Every project in this workspace, the one that needs attention first."
+        }
+        actions={
           <Link href={withProject("/brief", projectId)} className={buttonClass("secondary")}>
             Prep next meeting
           </Link>
-        </div>
+        }
+      />
 
-        {error && <ErrorText>Could not load dashboard data: {error.message}</ErrorText>}
+      {error && <ErrorText>Could not load dashboard data: {error.message}</ErrorText>}
 
-        {!error && findings.length === 0 && (
-          <div className="mt-8">
-            <EmptyState message="No findings yet — analyze a meeting to see trends here.">
-              <Link
-                href={withProject("/meetings/new", projectId)}
-                className="text-sm font-medium text-foreground underline underline-offset-4"
-              >
-                New meeting
-              </Link>
-            </EmptyState>
-          </div>
-        )}
+      {!error && findings.length === 0 && (
+        <EmptyState message="No findings yet. Analyze a meeting and its blockers, risks and decisions show up here.">
+          <Link href={withProject("/meetings/new", projectId)} className={buttonClass("primary")}>
+            New meeting
+          </Link>
+        </EmptyState>
+      )}
 
-        {!error && findings.length > 0 && (
-          <div className="mt-6 flex flex-col gap-6">
-            {projectSummaries.length > 0 && (
-              <section>
-                <h2 className="text-sm font-medium text-foreground">Projects overview</h2>
-                <p className="mt-0.5 text-xs text-secondary">
-                  Worst health first — open a project for its full dashboard.
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {projectSummaries.map(({ project: p, summary }) => (
-                    <Link
-                      key={p.id}
-                      href={`/dashboard?project=${p.id}`}
-                      className={`${CARD_COMPACT} flex flex-col transition-colors hover:border-accent`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium text-foreground">{p.name}</p>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <span className="text-sm font-semibold tabular-nums text-foreground">
-                            {summary.health.score}
-                          </span>
-                          <Badge tone={HEALTH_TONE[summary.health.level]}>
-                            {HEALTH_LABEL[summary.health.level]}
-                          </Badge>
+      {!error && findings.length > 0 && (
+        <div className="flex flex-col gap-12">
+          {projectSummaries.length > 0 && (
+            <section aria-labelledby="overview-title">
+              <h2 id="overview-title" className={SECTION_TITLE}>
+                Projects
+              </h2>
+              <p className="mt-0.5 text-sm text-secondary">
+                Lowest health first. Open one for its full dashboard.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {projectSummaries.map(({ project: p, summary }) => (
+                  <Link
+                    key={p.id}
+                    href={`/dashboard?project=${p.id}`}
+                    className={`${CARD_COMPACT} flex flex-col transition-colors hover:border-secondary`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-medium text-foreground">{p.name}</p>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="text-sm font-semibold tabular-nums text-foreground">
+                          {summary.health.score}
                         </span>
-                      </div>
-                      <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-secondary">
-                        <span>{summary.counts.blocker} blockers</span>
-                        <span>· {summary.counts.risk} risks</span>
-                        <span>· {summary.counts.dependency} deps</span>
-                        <span>· {summary.counts.decision} pending decisions</span>
-                        {summary.counts.overdue > 0 && (
-                          <span className="font-medium text-status-critical">
-                            · {summary.counts.overdue} overdue
-                          </span>
-                        )}
-                      </p>
-                      {summary.topIssues.length === 0 ? (
-                        <p className="mt-3 text-xs text-muted">No open issues.</p>
-                      ) : (
-                        <ul className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
-                          {summary.topIssues.map(({ finding }) => (
-                            <li key={finding.id} className="flex gap-2 text-xs">
-                              <span
-                                className={`shrink-0 font-medium ${
-                                  isOverdue(finding, today) ? "text-status-critical" : "text-muted"
-                                }`}
-                              >
-                                {isOverdue(finding, today) ? "Overdue" : ISSUE_TYPE_LABEL[finding.finding_type]}
-                              </span>
-                              <span className="line-clamp-2 text-secondary">{finding.description}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <Badge tone={HEALTH_TONE[summary.health.level]}>
+                          {HEALTH_LABEL[summary.health.level]}
+                        </Badge>
+                      </span>
+                    </div>
+                    <p className="mt-1.5 flex flex-wrap gap-x-3 text-xs tabular-nums text-secondary">
+                      <span>{summary.counts.blocker} blockers</span>
+                      <span>{summary.counts.risk} risks</span>
+                      <span>{summary.counts.dependency} dependencies</span>
+                      <span>{summary.counts.decision} pending decisions</span>
+                      {summary.counts.overdue > 0 && (
+                        <span className="font-medium text-status-critical">
+                          {summary.counts.overdue} overdue
+                        </span>
                       )}
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
+                    </p>
+                    {summary.topIssues.length === 0 ? (
+                      <p className="mt-3 text-xs text-muted">No open issues.</p>
+                    ) : (
+                      <ul className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
+                        {summary.topIssues.map(({ finding }) => (
+                          <li key={finding.id} className="flex gap-2 text-xs">
+                            <span
+                              className={`w-[4.5rem] shrink-0 font-medium ${
+                                isOverdue(finding, today) ? "text-status-critical" : "text-muted"
+                              }`}
+                            >
+                              {isOverdue(finding, today) ? "Overdue" : ISSUE_TYPE_LABEL[finding.finding_type]}
+                            </span>
+                            <span className="line-clamp-2 text-secondary">{finding.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
+          <section aria-label="Open items" className="flex flex-col gap-3">
             {truncated && (
               <p className="text-xs text-secondary">
-                Showing the most recent {FINDINGS_QUERY_CAP.toLocaleString()} findings — older
-                history is omitted from these totals.
+                Showing the most recent {FINDINGS_QUERY_CAP.toLocaleString()} findings. Older history
+                is left out of these totals.
               </p>
             )}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {(["blocker", "risk", "dependency"] as const).map((type) => (
-                <div key={type} className={CARD_COMPACT}>
-                  <p className="text-xs text-secondary">{FINDING_TYPE_LABEL[type]}</p>
-                  <p className="mt-1 text-xl font-semibold text-foreground">
-                    {openCounts[type]}
-                  </p>
+            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+              {tiles.map(([type, count]) => (
+                <div key={type} className="flex flex-col-reverse gap-1 bg-surface p-4">
+                  <dt className="text-xs text-secondary">{FINDING_TYPE_LABEL[type]}</dt>
+                  <dd
+                    className={`font-display text-3xl tabular-nums ${
+                      type === "blocker" && count > 0 ? "text-accent-ink" : "text-foreground"
+                    }`}
+                  >
+                    {count}
+                  </dd>
                 </div>
               ))}
-              <div className={CARD_COMPACT}>
-                <p className="text-xs text-secondary">Pending decisions</p>
-                <p className="mt-1 text-xl font-semibold text-foreground">{pendingDecisions}</p>
-              </div>
-            </div>
+            </dl>
+          </section>
 
-            <div className="grid gap-6 sm:grid-cols-2">
-              <HealthCard
-                health={health}
-                title={project ? "Project health" : "Workspace health"}
-              />
-              <section className={CARD}>
-                <h2 className="text-sm font-medium text-foreground">Overdue</h2>
-                {overdue.length === 0 ? (
-                  <p className="mt-2 text-sm text-secondary">
-                    Nothing past its due date. Set owners and due dates from a meeting&apos;s
-                    findings.
-                  </p>
-                ) : (
-                  <ul className="mt-3 flex flex-col gap-2">
-                    {overdue.map(({ finding }) => (
-                      <li key={finding.id} className="text-sm text-secondary">
-                        <span>{finding.description}</span>
-                        <span className="mt-0.5 block text-xs text-status-critical">
-                          due {finding.due_date}
-                          {finding.owner ? ` · ${finding.owner}` : " · no owner"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
-
+          <div className="grid gap-6 sm:grid-cols-2">
+            <HealthCard health={health} title={project ? "Project health" : "Workspace health"} />
             <section className={CARD}>
-              <h2 className="text-sm font-medium text-foreground">Open vs. resolved over time</h2>
-              {trend.length < 2 ? (
-                <p className="mt-3 text-sm text-secondary">
-                  Not enough history yet — this fills in as more meetings are analyzed
-                  and findings get resolved.
-                </p>
-              ) : (
-                <div className="mt-4">
-                  <TrendChart data={trend} />
-                </div>
-              )}
-            </section>
-
-            <section className={CARD}>
-              <h2 className="text-sm font-medium text-foreground">Recurring issues</h2>
-              {recurring.length === 0 ? (
+              <h2 className={SECTION_TITLE}>Overdue</h2>
+              {overdue.length === 0 ? (
                 <p className="mt-2 text-sm text-secondary">
-                  Nothing has recurred across meetings yet.
+                  Nothing past its due date. Owners and due dates are set on each meeting&apos;s
+                  findings.
                 </p>
               ) : (
-                <ul className="mt-3 flex flex-col gap-1.5">
-                  {recurring.map((group) => (
-                    <li
-                      key={group.recurrenceGroupId}
-                      className="flex items-center justify-between gap-3 text-sm text-secondary"
-                    >
-                      <span>{group.description}</span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <span className="text-xs text-muted">{group.occurrences}×</span>
-                        <Badge tone={group.anyOpen ? "neutral" : "good"}>
-                          {group.anyOpen ? "Open" : "Resolved"}
-                        </Badge>
+                <ul className="mt-3 flex flex-col gap-3">
+                  {overdue.map(({ finding }) => (
+                    <li key={finding.id} className="text-sm text-foreground">
+                      <span>{finding.description}</span>
+                      <span className="mt-0.5 flex gap-3 text-xs text-secondary">
+                        <span className="text-status-critical">Due {finding.due_date}</span>
+                        <span>{finding.owner ?? "No owner"}</span>
                       </span>
                     </li>
                   ))}
@@ -256,8 +223,51 @@ export default async function DashboardPage({
               )}
             </section>
           </div>
-        )}
-      </div>
-    </div>
+
+          <section aria-labelledby="trend-title">
+            <h2 id="trend-title" className={SECTION_TITLE}>
+              Open versus resolved over time
+            </h2>
+            {trend.length < 2 ? (
+              <p className="mt-2 text-sm text-secondary">
+                Not enough history yet. This fills in as more meetings are analyzed and findings get
+                resolved.
+              </p>
+            ) : (
+              <div className={`mt-4 ${CARD}`}>
+                <TrendChart data={trend} />
+              </div>
+            )}
+          </section>
+
+          <section aria-labelledby="recurring-title">
+            <h2 id="recurring-title" className={SECTION_TITLE}>
+              Recurring issues
+            </h2>
+            <p className="mt-0.5 text-sm text-secondary">The same issue raised in more than one meeting.</p>
+            {recurring.length === 0 ? (
+              <p className="mt-3 text-sm text-secondary">Nothing has come back across meetings yet.</p>
+            ) : (
+              <ul className="mt-3 border-t border-border">
+                {recurring.map((group) => (
+                  <li
+                    key={group.recurrenceGroupId}
+                    className="flex items-center justify-between gap-4 border-b border-border py-3 text-sm"
+                  >
+                    <span className="text-foreground">{group.description}</span>
+                    <span className="flex shrink-0 items-center gap-3">
+                      <span className="text-xs tabular-nums text-muted">{group.occurrences} meetings</span>
+                      <Badge tone={group.anyOpen ? "serious" : "good"}>
+                        {group.anyOpen ? "Still open" : "Resolved"}
+                      </Badge>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+    </AppShell>
   );
 }

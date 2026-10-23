@@ -98,14 +98,17 @@ Mirrors the phases in [`ROADMAP.md`](./ROADMAP.md). Check items off here as they
 
 ## Phase 10 — UX/UI pass (branch `design/ux-ui-pass`)
 
-Proposed order, highest impact for someone evaluating the portfolio first — to be discussed/adjusted before building:
+Visual identity decided 2026-10-22 (black + signal orange `#FE4C02`, dark by default, Archivo + Newsreader, thin-line lens graph as the signature element) and recorded in [`DESIGN.md`](./DESIGN.md).
 
-- [ ] Public landing page at `/` (today it only redirects to `/login`): explain the product in 30 seconds, link to the sample data.
-- [ ] Sidebar navigation with the project switcher always visible (the header has 6 loose links and the current project should never be hidden).
-- [ ] Meeting detail page reorganized: summary + suggested actions on top, findings in tabs by type, transcript side by side on desktop.
-- [ ] Analysis progress state: show the 3 stages (extraction → diagnosis → synthesis) instead of a bare "Analyzing…" (takes ~30-60s).
-- [ ] Mobile responsiveness + light/dark theme toggle (recruiters open links on phones).
-- [ ] Polish: visible focus states, transitions, "saved" toasts, icons.
+- [x] Public landing page at `/`: hero + interactive lens graph (deterministic SVG, the lens magnifies and follows the pointer), a transcript → findings demo built from the sample data, the 3-stage pipeline, post-meeting tools, and an honest portfolio note.
+- [x] Sidebar navigation (`src/components/app-shell.tsx`) with the project switcher, New meeting, and theme/billing/sign-out; slide-over menu below `lg`. Replaces `AppHeader` + the per-page switcher.
+- [x] Meeting detail page reorganized: summary + suggested actions on top, findings in accessible tabs by type, diagnosis with each lens's question, sticky transcript side by side on desktop, and evidence quotes linking to `#line-N` in the transcript. A new meeting now redirects to its own result instead of the list.
+- [x] Analysis progress state: the 3 stages driven by real `ai_calls` inserts over Realtime (`analysis-progress.tsx`), no polling.
+- [x] Mobile responsiveness + light/dark theme toggle (`data-theme` set before paint, stored in `localStorage`).
+- [x] Polish: `:focus-visible` ring, icons, `icon.svg` replacing the default favicon, plain-language copy across empty/error states.
+- [x] Verified (2026-10-22): typecheck, lint, 49/49 tests, `next build`; checked in a real browser at desktop and 390px width (landing, meetings, meeting detail, progress state, dashboard, mobile menu, light theme), no horizontal scroll, no console errors.
+- [ ] **Manual:** apply migration `20261022010000_enable_ai_calls_realtime.sql` to remote Supabase. Until then the progress view still works but only advances on the final refresh.
+- [ ] "Saved" toasts on inline edits (owner/due date, resolve toggles). Not done; the inline state change is the only feedback today.
 
 ---
 

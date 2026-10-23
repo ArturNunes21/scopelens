@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { buttonClass, CARD_CENTERED } from "@/components/ui";
+import { buttonClass } from "@/components/ui";
 
 // App-level error boundary (Next.js convention): catches anything an RSC or
 // server action throws instead of the framework's default error screen.
@@ -14,20 +14,18 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <div className="flex flex-1 items-center justify-center bg-background">
-      <div className={`w-full max-w-sm ${CARD_CENTERED}`}>
-        <h1 className="text-lg font-semibold text-foreground">Something went wrong</h1>
+    <div className="flex flex-1 items-center px-4 sm:px-8">
+      <div className="mx-auto w-full max-w-md">
+        <h1 className="font-display text-3xl text-foreground">This page didn&apos;t load</h1>
         <p className="mt-2 text-sm text-secondary">
-          An unexpected error occurred. You can try again, or head back to your meetings.
+          Something unexpected failed on our side. Your data is safe. Try again, or go back to your
+          meetings.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-4">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <button type="button" onClick={reset} className={buttonClass("primary")}>
             Try again
           </button>
-          <Link
-            href="/meetings"
-            className="text-sm font-medium text-foreground underline underline-offset-4"
-          >
+          <Link href="/meetings" className={buttonClass("secondary")}>
             Back to meetings
           </Link>
         </div>
