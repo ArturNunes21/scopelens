@@ -20,10 +20,11 @@ export function FindingResolveToggle({
       onClick={() =>
         startTransition(() => toggleFindingStatus(findingId, nextStatus))
       }
-      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+      title={status === "resolved" ? "Reopen" : undefined}
+      className={`shrink-0 rounded px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors disabled:opacity-50 ${
         status === "resolved"
           ? "bg-status-good-bg text-status-good hover:opacity-80"
-          : "bg-black/[.05] text-secondary hover:bg-black/[.08] dark:bg-white/[.08] dark:hover:bg-white/[.12]"
+          : "border border-border text-secondary hover:border-secondary hover:text-foreground"
       }`}
     >
       {isPending ? "…" : status === "resolved" ? "Resolved" : "Mark resolved"}

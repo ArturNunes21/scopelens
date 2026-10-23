@@ -1,12 +1,14 @@
 import { requireWorkspace } from "@/lib/workspace";
 import { getFreePlanMeetingLimit } from "@/lib/billing";
+import { getProjectScope } from "@/lib/projects";
 import { createCheckoutSession } from "./actions";
-import { AppHeader, Badge, buttonClass, CARD } from "@/components/ui";
+import { AppShell } from "@/components/app-shell";
+import { Badge, buttonClass, CARD, PageHeader, SECTION_TITLE } from "@/components/ui";
 
 const STATUS_MESSAGE: Record<string, { text: string; tone: "ok" | "error" }> = {
-  success: { text: "Upgrade complete — Pro is now active.", tone: "ok" },
-  canceled: { text: "Checkout canceled — still on the free plan.", tone: "error" },
-  not_configured: { text: "Billing isn't configured yet — missing Stripe price.", tone: "error" },
+  success: { text: "Upgrade complete. Pro is now active.", tone: "ok" },
+  canceled: { text: "Checkout canceled. You're still on the free plan.", tone: "error" },
+  not_configured: { text: "Billing isn't configured yet: the Stripe price is missing.", tone: "error" },
   checkout_failed: { text: "Could not start checkout. Try again.", tone: "error" },
 };
 
@@ -16,11 +18,10 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
   const statusKey = params.success ? "success" : (params.error as string | undefined) ?? (params.canceled ? "canceled" : undefined);
   const status = statusKey ? STATUS_MESSAGE[statusKey] : undefined;
 
-  const { data: workspace } = await supabase
-    .from("workspaces")
-    .select("plan")
-    .eq("id", workspaceId)
-    .single();
+  const [{ projects }, { data: workspace }] = await Promise.all([
+    getProjectScope(supabase, workspaceId, null),
+    supabase.from("workspaces").select("plan").eq("id", workspaceId).single(),
+  ]);
   const plan = workspace?.plan ?? "free";
 
   const monthStart = new Date();
@@ -33,43 +34,60 @@ export default async function BillingPage({ searchParams }: PageProps<"/billing"
     .gte("created_at", monthStart.toISOString());
 
   const limit = getFreePlanMeetingLimit();
+  const used = meetingsThisMonth ?? 0;
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
-        <AppHeader title="Billing" active="/billing" />
+    <AppShell active="/billing" projects={projects} projectId={null}>
+      <div className="max-w-2xl">
+        <PageHeader title="Plan and billing" />
 
         {status && (
-          <p className={`mt-4 text-sm ${status.tone === "ok" ? "text-status-good" : "text-status-critical"}`}>
+          <p
+            role="status"
+            className={`mb-6 text-sm ${status.tone === "ok" ? "text-status-good" : "text-status-critical"}`}
+          >
             {status.text}
           </p>
         )}
 
-        <div className={`mt-6 ${CARD}`}>
-          <div className="flex items-center justify-between">
+        <section className={CARD}>
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Current plan</p>
-              <p className="mt-1 text-xs text-secondary">
-                {plan === "pro"
-                  ? "Pro — unlimited meetings/month."
-                  : `Free — ${meetingsThisMonth ?? 0}/${limit} meetings used this month.`}
+              <h2 className={SECTION_TITLE}>Current plan</h2>
+              <p className="mt-1 text-sm text-secondary">
+                {plan === "pro" ? "Unlimited meetings each month." : `${limit} analyzed meetings each month.`}
               </p>
             </div>
             <Badge tone={plan === "pro" ? "good" : "neutral"}>{plan === "pro" ? "Pro" : "Free"}</Badge>
           </div>
 
           {plan !== "pro" && (
-            <form action={createCheckoutSession} className="mt-4">
-              <button type="submit" className={buttonClass("primary")}>
-                Upgrade to Pro
-              </button>
-              <span className="ml-3 text-xs text-secondary">
-                Stripe Checkout, test mode — no real charge.
-              </span>
-            </form>
+            <>
+              <div className="mt-5">
+                <div className="flex justify-between text-xs tabular-nums text-secondary">
+                  <span>Used this month</span>
+                  <span>
+                    {used} of {limit}
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-2">
+                  <div
+                    className={`h-full rounded-full ${used >= limit ? "bg-accent" : "bg-foreground"}`}
+                    style={{ width: `${Math.min(100, (used / Math.max(limit, 1)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <form action={createCheckoutSession} className="mt-6 flex flex-wrap items-center gap-3">
+                <button type="submit" className={buttonClass("primary")}>
+                  Upgrade to Pro
+                </button>
+                <span className="text-xs text-secondary">Stripe test mode, no real charge.</span>
+              </form>
+            </>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -47,6 +47,16 @@ export function keywords(text: string): Set<string> {
   return result;
 }
 
+// "Ana (PM): text" → speaker + text, so the transcript view can set the
+// speaker apart from what they said. Lines without a speaker prefix pass
+// through untouched.
+const SPEAKER_PATTERN = /^([A-ZÀ-Ý][\p{L} .'-]{0,40}?(?:\s*\([^)]{1,30}\))?):\s+(.+)$/u;
+
+export function splitSpeaker(line: string): { speaker: string | null; text: string } {
+  const match = SPEAKER_PATTERN.exec(line);
+  return match ? { speaker: match[1], text: match[2] } : { speaker: null, text: line };
+}
+
 export function splitTranscript(transcript: string): string[] {
   const segments: string[] = [];
   for (const rawLine of transcript.split(/\r?\n/)) {

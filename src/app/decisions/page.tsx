@@ -4,9 +4,9 @@ import { getProjectScope, projectParam, withProject } from "@/lib/projects";
 import { fetchScopedFindings } from "@/lib/findings-query";
 import { buildDecisionLog, type DecisionNote } from "@/lib/decisions";
 import { todayUtc } from "@/lib/dashboard";
-import { ProjectSwitcher } from "@/components/project-switcher";
+import { AppShell } from "@/components/app-shell";
 import { DecisionStatusToggle } from "@/components/decision-status-toggle";
-import { AppHeader, Badge, CARD_COMPACT, EmptyState, ErrorText } from "@/components/ui";
+import { Badge, EmptyState, ErrorText, Meta, PageHeader } from "@/components/ui";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -46,101 +46,98 @@ export default async function DecisionsPage({
     withProject(key === "all" ? "/decisions" : `/decisions?status=${key}`, projectId);
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-        <AppHeader
-          title="Decision log"
-          subtitle="Every decision recorded across meetings — what was decided, when, and what contradicts it"
-          active="/decisions"
-          projectId={projectId}
-        />
-
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <ProjectSwitcher projects={projects} projectId={projectId} />
-          <div className="flex gap-1 rounded-full border border-border p-0.5 text-xs">
+    <AppShell active="/decisions" projects={projects} projectId={projectId}>
+      <PageHeader
+        title="Decision log"
+        subtitle="Every decision recorded across meetings: what was decided, when, and what later contradicted it."
+        actions={
+          <nav aria-label="Filter decisions" className="flex rounded border border-border p-0.5 text-sm">
             {FILTERS.map((f) => (
               <Link
                 key={f.key}
                 href={filterHref(f.key)}
-                className={`rounded-full px-3 py-1 transition-colors ${
-                  filter === f.key ? "bg-accent text-accent-foreground" : "text-secondary"
+                aria-current={filter === f.key ? "page" : undefined}
+                className={`rounded-sm px-3 py-1 transition-colors ${
+                  filter === f.key ? "bg-surface-2 text-foreground" : "text-secondary hover:text-foreground"
                 }`}
               >
                 {f.label}
               </Link>
             ))}
-          </div>
-        </div>
+          </nav>
+        }
+      />
 
-        {error && <ErrorText>Could not load decisions: {error.message}</ErrorText>}
+      {error && <ErrorText>Could not load decisions: {error.message}</ErrorText>}
 
-        {!error && visible.length === 0 && (
-          <div className="mt-8">
-            <EmptyState
-              message={
-                log.length === 0
-                  ? "No decisions recorded yet — they're extracted automatically from analyzed meetings."
-                  : "No decisions match this filter."
-              }
-            />
-          </div>
-        )}
+      {!error && visible.length === 0 && (
+        <EmptyState
+          message={
+            log.length === 0
+              ? "No decisions recorded yet. They are pulled out of every analyzed meeting automatically."
+              : "No decisions match this filter."
+          }
+        />
+      )}
 
-        {!error && visible.length > 0 && (
-          <ol className="mt-6 flex flex-col gap-3">
-            {visible.map((decision) => (
-              <li key={decision.id} className={CARD_COMPACT}>
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm text-foreground">{decision.description}</p>
-                  <DecisionStatusToggle findingId={decision.id} status={decision.decisionStatus} />
-                </div>
-                <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-secondary">
-                  {decision.meeting?.id ? (
-                    <Link
-                      href={`/meetings/${decision.meeting.id}`}
-                      className="underline underline-offset-2 hover:text-foreground"
-                    >
-                      {decision.meeting.title}
-                    </Link>
-                  ) : null}
-                  {decision.meeting && (
-                    <span>{new Date(decision.meeting.occurred_at).toLocaleDateString()}</span>
-                  )}
-                  {decision.owner && <span>· Owner: {decision.owner}</span>}
-                  {decision.dueDate && (
-                    <span
-                      className={
-                        decision.decisionStatus === "pending" && decision.dueDate < today
-                          ? "font-medium text-status-critical"
-                          : ""
-                      }
-                    >
-                      · Due {decision.dueDate}
-                    </span>
-                  )}
-                  {decision.occurrences > 1 && (
-                    <Badge tone="neutral">raised {decision.occurrences}×</Badge>
-                  )}
-                  {decision.revisitedLater && <Badge tone="warning">revisited later</Badge>}
-                </p>
-                {decision.contradictions.length > 0 && (
-                  <ul className="mt-2 flex flex-col gap-1.5">
-                    {decision.contradictions.map((content, index) => (
-                      <li
-                        key={index}
-                        className="rounded border-l-2 border-status-serious bg-status-serious-bg px-3 py-2 text-xs text-secondary"
-                      >
-                        <span className="font-medium text-foreground">Contradiction: </span>
-                        {content}
-                      </li>
-                    ))}
-                  </ul>
+      {!error && visible.length > 0 && (
+        <ol className="border-t border-border">
+          {visible.map((decision) => (
+            <li key={decision.id} className="border-b border-border py-5">
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-[0.95rem] leading-snug text-foreground">{decision.description}</p>
+                <DecisionStatusToggle findingId={decision.id} status={decision.decisionStatus} />
+              </div>
+              <Meta className="mt-2">
+                {decision.meeting?.id && (
+                  <Link
+                    href={`/meetings/${decision.meeting.id}`}
+                    className="underline decoration-border underline-offset-2 hover:text-foreground"
+                  >
+                    {decision.meeting.title}
+                  </Link>
                 )}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-    </div>
+                {decision.meeting && (
+                  <time dateTime={decision.meeting.occurred_at}>
+                    {new Date(decision.meeting.occurred_at).toLocaleDateString()}
+                  </time>
+                )}
+                {decision.owner && (
+                  <span>
+                    <span className="text-muted">Owner</span> {decision.owner}
+                  </span>
+                )}
+                {decision.dueDate && (
+                  <span
+                    className={
+                      decision.decisionStatus === "pending" && decision.dueDate < today
+                        ? "font-medium text-status-critical"
+                        : ""
+                    }
+                  >
+                    Due {decision.dueDate}
+                  </span>
+                )}
+                {decision.occurrences > 1 && <Badge tone="neutral">Raised {decision.occurrences} times</Badge>}
+                {decision.revisitedLater && <Badge tone="warning">Revisited later</Badge>}
+              </Meta>
+              {decision.contradictions.length > 0 && (
+                <ul className="mt-3 flex flex-col gap-2">
+                  {decision.contradictions.map((content, index) => (
+                    <li
+                      key={index}
+                      className="rounded border-l-2 border-accent bg-status-serious-bg px-3 py-2 text-sm text-secondary"
+                    >
+                      <span className="font-medium text-foreground">Contradicted later: </span>
+                      {content}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </AppShell>
   );
 }

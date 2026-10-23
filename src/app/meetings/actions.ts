@@ -123,7 +123,8 @@ export async function createMeeting(
   // meeting itself (status='failed'), never thrown back to the form.
   await runExtractionPipeline(meeting.id, workspaceId);
 
-  redirect(withProject("/meetings", project.id));
+  // Land on the result (or its failure + Retry), not back on the list.
+  redirect(`/meetings/${meeting.id}`);
 }
 
 // User-triggered retry (ARCHITECTURE.md section 3, resolves GAPS.md G13): the

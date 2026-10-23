@@ -1,38 +1,71 @@
 @import "tailwindcss";
 
-/* Design tokens — palette validated via the dataviz skill's method
-   (CVD-safe categorical/status colors); see PRD.md section 10 for stack,
-   this file is the only place hex values live. Dark values are selected
-   steps of the same palette, not an automatic filter/invert. */
-:root {
-  --background: #f9f9f7;
-  --foreground: #0b0b0b;
-  --surface: #fcfcfb;
-  --secondary: #52514e;
-  --muted: #898781;
-  --border: rgba(11, 11, 11, 0.1);
-  --gridline: #e1e0d9;
-  --accent: #2a78d6;
-  --accent-foreground: #ffffff;
-  --status-good: #0ca30c;
-  --status-good-bg: #e9f7e9;
-  --status-warning: #fab219;
-  --status-warning-bg: #fef3d9;
-  --status-serious: #ec835a;
-  --status-serious-bg: #fdeae2;
-  --status-critical: #d03b3b;
-  --status-critical-bg: #fbe4e4;
+/* Theme is chosen by a data-theme attribute on <html> (set before paint by
+   the inline script in layout.tsx), so the toggle wins over the OS setting.
+   Dark is the default identity — see DESIGN.md. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens — this file is the only place hex values live (DESIGN.md).
+   Orange means "needs attention": status is encoded by fill intensity
+   (solid / tint / outline), not by adding more warm hues. */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #000000;
+  --surface: #101010;
+  --surface-2: #181818;
+  --foreground: #f2f1ee;
+  --secondary: #a3a29d;
+  --muted: #6e6d69;
+  --border: #232323;
+  --gridline: #1c1c1c;
+  --accent: #fe4c02;
+  --accent-ink: #ff6a2b;
+  --accent-foreground: #000000;
+  --status-good: #4cc38a;
+  --status-good-bg: rgba(76, 195, 138, 0.13);
+  --status-warning: #e8c547;
+  --status-warning-bg: rgba(232, 197, 71, 0.13);
+  --status-serious: var(--accent-ink);
+  --status-serious-bg: rgba(254, 76, 2, 0.14);
+  --status-critical: var(--accent-ink);
+  --status-critical-bg: rgba(254, 76, 2, 0.14);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f1f1ef;
+  --foreground: #121212;
+  --secondary: #55544f;
+  --muted: #8a8984;
+  --border: #e4e4e0;
+  --gridline: #ecece8;
+  --accent: #fe4c02;
+  --accent-ink: #c23a00;
+  --accent-foreground: #000000;
+  --status-good: #16794a;
+  --status-good-bg: #e3f3ea;
+  --status-warning: #7a5d00;
+  --status-warning-bg: #f8efc8;
+  --status-serious: var(--accent-ink);
+  --status-serious-bg: #ffe6db;
+  --status-critical: var(--accent-ink);
+  --status-critical-bg: #ffe6db;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-secondary: var(--secondary);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-gridline: var(--gridline);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-foreground: var(--accent-foreground);
   --color-status-good: var(--status-good);
   --color-status-good-bg: var(--status-good-bg);
@@ -42,34 +75,82 @@
   --color-status-serious-bg: var(--status-serious-bg);
   --color-status-critical: var(--status-critical);
   --color-status-critical-bg: var(--status-critical-bg);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0d0d0d;
-    --foreground: #ffffff;
-    --surface: #1a1a19;
-    --secondary: #c3c2b7;
-    --muted: #898781;
-    --border: rgba(255, 255, 255, 0.1);
-    --gridline: #2c2c2a;
-    --accent: #3987e5;
-    --accent-foreground: #ffffff;
-    --status-good: #0ca30c;
-    --status-good-bg: rgba(12, 163, 12, 0.14);
-    --status-warning: #fab219;
-    --status-warning-bg: rgba(250, 178, 25, 0.16);
-    --status-serious: #ec835a;
-    --status-serious-bg: rgba(236, 131, 90, 0.16);
-    --status-critical: #d03b3b;
-    --status-critical-bg: rgba(208, 59, 59, 0.16);
-  }
+  --font-sans: var(--font-archivo);
+  --font-serif: var(--font-newsreader);
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-archivo), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Archivo's width axis is the display voice: expanded, light, tight. */
+@utility font-display {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-variation-settings: "wdth" 118;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+}
+
+@utility font-wide {
+  font-variation-settings: "wdth" 125;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* Transcript line targeted from an evidence link (meeting detail). */
+.transcript-line:target {
+  background: var(--status-serious-bg);
+  color: var(--foreground);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* Landing hero: the one orchestrated moment (DESIGN.md "Motion"). */
+@keyframes hairlines-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes trace {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes settle {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+/* Analysis in progress: a scan sweeping across the active stage. */
+@keyframes scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(400%); }
+}
+
+.anim-hairlines { animation: hairlines-in 1.2s ease-out both; }
+.anim-trace { stroke-dasharray: 1; stroke-dashoffset: 1; animation: trace 1.6s 0.5s cubic-bezier(0.6, 0, 0.2, 1) forwards; }
+.anim-settle { transform-box: fill-box; transform-origin: center; animation: settle 0.7s 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-rise { animation: rise 0.6s 2s ease-out both; }
+.anim-scan { animation: scan 1.8s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-hairlines,
+  .anim-trace,
+  .anim-settle,
+  .anim-rise,
+  .anim-scan {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  html { scroll-behavior: auto; }
 }

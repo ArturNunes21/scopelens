@@ -1,6 +1,7 @@
 import { requireWorkspace } from "@/lib/workspace";
 import { getProjectScope, projectParam } from "@/lib/projects";
 import { NewMeetingForm } from "./new-meeting-form";
+import { AppShell } from "@/components/app-shell";
 
 export default async function NewMeetingPage({
   searchParams,
@@ -17,9 +18,8 @@ export default async function NewMeetingPage({
   // Every workspace gets a default project on creation (migration
   // 20261022000000), so there is always at least one to preselect.
   return (
-    <NewMeetingForm
-      projects={projects}
-      defaultProjectId={projectId ?? projects[0]?.id ?? ""}
-    />
+    <AppShell active="/meetings" projects={projects} projectId={projectId}>
+      <NewMeetingForm projects={projects} defaultProjectId={projectId ?? projects[0]?.id ?? ""} />
+    </AppShell>
   );
 }
